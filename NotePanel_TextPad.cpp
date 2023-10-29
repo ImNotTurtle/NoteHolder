@@ -4,9 +4,19 @@
 #define JSON_END_MARK							(wxString("$#@"))
 
 #define CHILD_CHANGED							(m_parent->OnChildChanged())
-#define MIN_SIZE								(wxSize(200, 100))
 
 extern void SetStatusText(wxString text, int index = 0);
+
+static int GetLineMaxWidth(wxWindow* window, wxString content) {
+	int maxWidth = 0;
+	wxStringTokenizer tokenizer(content, "\n");
+	while (tokenizer.HasMoreTokens()) {
+		wxString line = tokenizer.GetNextToken();
+		int width = window->GetTextExtent(line).x;
+		maxWidth = std::max(maxWidth, width);
+	}
+	return maxWidth;
+}
 
 
 TextPad::TextPad(NotePanel* parent)
@@ -33,7 +43,6 @@ TextPad::TextPad(NotePanel* parent)
 	m_tctrl->Bind(wxEVT_RIGHT_DOWN, &TextPad::OnRightDown, this);
 	m_tctrl->Bind(wxEVT_TEXT, &TextPad::OnTextChanged, this);
 #pragma endregion
-
 
 }
 /**************************************************************************
@@ -88,7 +97,18 @@ void TextPad::OnCharHook(wxKeyEvent& evt) {//adjust the height when user press e
 	}
 }
 void TextPad::OnTextChanged(wxCommandEvent& evt) {
-	CHILD_CHANGED;
+	auto window = m_tctrl;
+	if (window) {
+		int charWidth = window->GetCharWidth() * 2;
+		int maxWidth = GetLineMaxWidth(window, window->GetValue());
+		
+		if ((maxWidth + charWidth) >= window->GetSize().x) {//overflow on width
+			wxSize newSize = window->GetSize();
+			newSize.x += charWidth * 2.0f;
+			m_parent->OnChildSizeReport(newSize);
+		}
+		CHILD_CHANGED;
+	}
 	evt.Skip();
 }
 void TextPad::OnTextPaste(wxClipboardTextEvent& evt) {//adjust row when user paste text 
@@ -137,6 +157,7 @@ void TextPad::OnRightDown(wxMouseEvent& evt) {
 	m_rightDown = true;
 	evt.Skip();
 }
+
 #pragma endregion
 
 
@@ -144,7 +165,7 @@ void TextPad::BuildContextMenu(void) {
 	auto owner = m_tctrl;
 	m_contextMenu = new wxMenu();
 
-	auto fitContent = m_contextMenu->Append(wxID_ANY, wxString::FromUTF8("Tùy chỉnh kích thước tự động \t Ctrl + F"));
+	auto fitContent = m_contextMenu->Append(wxID_ANY, wxString::FromUTF8("Tùy chỉnh kích thước tự động"));
 	auto eraseContent = m_contextMenu->Append(wxID_ANY, wxString::FromUTF8("Xóa nội dung"));
 	m_contextMenu->AppendSeparator();
 	auto selectAll = m_contextMenu->Append(wxID_ANY, wxString::FromUTF8("Chọn toàn bộ nội dung \t Ctrl + A"));
@@ -157,12 +178,13 @@ void TextPad::BuildContextMenu(void) {
 		//find the text size and fit it
 		wxClientDC dc(owner);
 		wxSize textSize = dc.GetMultiLineTextExtent(owner->GetValue());
+		wxSize minSize = m_parent->GetMinSize();
 		//add some padding
 		textSize.x += owner->GetCharWidth() * 2;
 		textSize.y += owner->GetCharHeight();
 		//clamp the size
-		textSize.x = SharedData::Max(textSize.x, MIN_SIZE.x);
-		textSize.y = SharedData::Max(textSize.y, MIN_SIZE.y);
+		textSize.x = SharedData::Max(textSize.x, minSize.x);
+		textSize.y = SharedData::Max(textSize.y, minSize.y);
 		m_parent->OnChildSizeReport(textSize);
 		CHILD_CHANGED;
 		//this->UpdateOnZoom();//update the note after set size

@@ -9,7 +9,7 @@ extern void SetStatusText(wxString text, int index = 0);
 
 *******************************************************************/
 #define BORDER_SIZE					(3)
-#define MIN_SIZE					(wxSize(200, 100))
+#define MIN_SIZE					(wxSize(150, 60))
 #define NUMBER(x)					(std::stoi(x))
 #define STRING(x)					(std::to_string(x))
 #define PAIR(p)						(std::to_string(p.x) + "," + std::to_string(p.y))
@@ -138,7 +138,7 @@ void NotePanel::Init(NoteHolderPanel* parent, NOTE_TYPE_e type) {
 	BindingEventRecursive(this);
 #pragma endregion
 
-
+	this->SetMinSize(MIN_SIZE);
 	this->Layout();
 	this->SetDoubleBuffered(true);
 }
@@ -220,12 +220,17 @@ void NotePanel::UpdateOnZoom(void) {//update size, position, font size and heade
 
 //child events
 void NotePanel::OnChildSizeReport(wxSize childSize) {//this function is used when the note panel children wants to change the parent size 
-	float widthRatio = m_originRect.width * 1.0f / m_notepad->GetSize().x;
-	float heightRatio = m_originRect.height * 1.0f / m_notepad->GetSize().y;
+	float zoomFactor = m_parent->GetZoomFactor();
+	// rescale zoomFactor to get the origin width and height
+	int originWidth = m_originRect.width * 1.0f / zoomFactor;
+	int originHeight = m_originRect.height * 1.0f / zoomFactor;
+	// calculate the ratio between parent and child
+	float widthRatio = originWidth * 1.0f / m_notepad->GetSize().x;
+	float heightRatio = originHeight * 1.0f / m_notepad->GetSize().y;
 	int newWidth = childSize.x * widthRatio;
 	int newHeight = childSize.y * heightRatio;
-	m_originRect.SetWidth(newWidth);
-	m_originRect.SetHeight(newHeight);
+	m_originRect.SetWidth(newWidth * zoomFactor);
+	m_originRect.SetHeight(newHeight * zoomFactor);
 	this->UpdateSize();
 	CHILD_CHANGED;
 }
@@ -305,7 +310,7 @@ void NotePanel::SetMinimize(bool minimized) {
 	if (minimized) {//the user asks to minimize
 		if (!m_isMinimized) {//but the note has to be un-minimize
 			m_originSize = m_originRect.GetSize();
-			m_originRect.SetSize(wxSize(m_originRect.GetSize().x, 80));
+			m_originRect.SetSize(wxSize(m_originRect.GetSize().x, MIN_SIZE.y));
 			m_notepad->Hide();
 		}
 	}
