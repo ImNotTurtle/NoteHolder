@@ -3,6 +3,7 @@
 #include <wx/tokenzr.h>
 #include <wx/clipbrd.h>
 
+
 #include "NotePanel_NotePad.h"
 #include "SharedData.h"
 
