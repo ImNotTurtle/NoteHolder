@@ -1,2 +1,2 @@
-[D:\Projects\C++\NoteHolder\MyResources\Logs\note_log.txt]
-0
+[D:\Projects\C++\NoteHolder\MyResources\Logs\note_log.txt,D:\timhieudoanhnghiep.txt,D:\tìm hiểu doanh nghiệp.txt]
+1
