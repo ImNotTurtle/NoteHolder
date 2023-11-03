@@ -159,11 +159,12 @@ wxString SharedData::ReadFile(wxString filePath){
         return fileContent;
     }
     return "";
-
 }
 bool SharedData::WriteFile(wxString filePath, wxString fileContent) {
     wxFile file(filePath, wxFile::write);
     if (!file.IsOpened()) return false;
+    file.Write(fileContent);
+    return true;
 }
 void SharedData::EditFileAtLine(wxString filePath, int lineIndex, wxString replaceBy) {
     wxString fileContent = SharedData::ReadFile(filePath);

@@ -1,5 +1,11 @@
 #include "NoteManager.h"
 
+/*
+* PENDING: Open File in browser
+*		  - Show absolute location as tooltip on notebook tab
+*		  - Fix notebook out of range when application start up
+
+*/
 
 NoteManager::NoteManager(wxWindow* parent, int id, wxPoint pos, wxSize size) {
 	wxNotebook::Create(parent, id, pos, size);

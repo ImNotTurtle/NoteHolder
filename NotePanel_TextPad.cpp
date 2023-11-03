@@ -65,7 +65,7 @@ void TextPad::FromJson(wxString json) {
 	if (SharedData::StartWith(json, JSON_START_MARK) && SharedData::EndWith(json, JSON_END_MARK)) {
 		json.Remove(0, JSON_START_MARK.size());
 		json.RemoveLast(JSON_END_MARK.size());
-		m_tctrl->SetValue(wxString::FromUTF8(json));
+		m_tctrl->SetValue(json);
 	}
 }
 wxString TextPad::ToJson(void) {

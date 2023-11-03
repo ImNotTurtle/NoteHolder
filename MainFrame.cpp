@@ -122,6 +122,9 @@ void MainFrame::ProgramStart(void) {
 				index = SharedData::Clamp(index, 0, (int)m_noteManager->GetPanelList().size() - 1);
 				m_noteManager->SetSelection(index);
 			}
+			else {
+				m_noteManager->SetSelection(0);
+			}
 		}
 		catch (...) {
 			m_noteManager->SetSelection(0);

@@ -266,7 +266,7 @@ void NotePanel::FromJson(wxString json) {
 		if (SharedData::StartWith(header, "@\"") && SharedData::EndWith(header, "\"#")) {//start with @" and end with "#
 			header.Remove(0, 2);//remove the first 2 characters
 			header.RemoveLast(2);//remove the last 2 characters
-			m_headerTC->SetValue(wxString::FromUTF8(header));
+			m_headerTC->SetValue(header);
 		}
 	}
 	//content
