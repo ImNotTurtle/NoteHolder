@@ -1,5 +1,7 @@
 #include "SharedData.h"
 
+extern void SetStatusText(wxString text, int index = 0);
+
 
 #pragma region NumberManipulations
 
@@ -150,27 +152,18 @@ wxString SharedData::Join(std::vector<wxString> list, wxString joinBy) {
 
 #pragma region FileManipulations
 wxString SharedData::ReadFile(wxString filePath){
-    namespace fs = std::filesystem;
-    const fs::path path = filePath.ToStdString();
-    if (!(fs::status(path).type() == fs::file_type::regular)) {//not a file
-        return "";
+    wxFile file(filePath, wxFile::read);
+    if (!file.IsOpened()) return "";
+    wxString fileContent;
+    if (file.ReadAll(&fileContent)) {
+        return fileContent;
     }
-    std::ifstream file;
-    file.open(filePath.ToStdString());
-    std::stringstream buffer;
-    buffer << file.rdbuf();
-    file.close();
-    return (wxString(buffer.str()));
+    return "";
+
 }
 bool SharedData::WriteFile(wxString filePath, wxString fileContent) {
-    std::ofstream file;
-    file.open(filePath.ToStdString());
-    if (!file.is_open()) {
-        file.close();
-        return false;
-    }
-    file << fileContent;
-    return true;
+    wxFile file(filePath, wxFile::write);
+    if (!file.IsOpened()) return false;
 }
 void SharedData::EditFileAtLine(wxString filePath, int lineIndex, wxString replaceBy) {
     wxString fileContent = SharedData::ReadFile(filePath);

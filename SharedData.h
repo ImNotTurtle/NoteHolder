@@ -4,6 +4,7 @@
 #include <fstream>
 
 #include <wx/string.h>
+#include <wx/file.h>
 
 #define APP_POS						(wxPoint(100, 50))
 #define APP_SIZE					(wxSize(1100, 600))
