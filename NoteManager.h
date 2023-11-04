@@ -1,5 +1,6 @@
 #pragma once
 #include <wx/wx.h>
+#include <wx/filename.h>
 #include <wx/notebook.h>
 #include <vector>
 #include <filesystem>

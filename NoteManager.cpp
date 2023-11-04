@@ -1,5 +1,9 @@
 #include "NoteManager.h"
 
+#define DEFAULT_NEW_NOTE_NAME				("Untitled-")
+
+
+extern void SetStatusText(wxString text, int index = 0);
 /*
 * PENDING: Open File in browser
 *		  - Show absolute location as tooltip on notebook tab
@@ -21,51 +25,81 @@ void NoteManager::BuildContextMenu(void) {
 
 	auto createLeft = m_contextMenu->Append(wxID_ANY, wxString::FromUTF8("Thêm tab mới vào bên trái"));
 	auto createRight = m_contextMenu->Append(wxID_ANY, wxString::FromUTF8("Thêm tab mới vào bên phải"));
-	auto open = m_contextMenu->Append(wxID_ANY, wxString::FromUTF8("Mở file"));
-	auto closeNote = m_contextMenu->Append(wxID_ANY, wxString::FromUTF8("Đóng tab này"));
+	auto open = m_contextMenu->Append(wxID_ANY, wxString::FromUTF8("Mở file \t Ctrl + O"));
+	m_contextMenu->AppendSeparator();
+	auto closeNote = m_contextMenu->Append(wxID_ANY, wxString::FromUTF8("Đóng tab này \t Ctrl + W"));
 	auto closeLeft = m_contextMenu->Append(wxID_ANY, wxString::FromUTF8("Đóng các tab ở bên trái"));
 	auto closeRight = m_contextMenu->Append(wxID_ANY, wxString::FromUTF8("Đóng các tab ở bên phải"));
+	m_contextMenu->AppendSeparator();
+	auto openInBrower = m_contextMenu->Append(wxID_ANY, wxString::FromUTF8("Mở thư mục"));
 
-	//create left
-	this->Bind(wxEVT_MENU, [this](wxCommandEvent& evt) {
-		int index = HitTest(m_mousePos);
-		this->CreateNotePanel(index);
-		this->SetSelection(index);
-		}, createLeft->GetId());
-	//create right
-	this->Bind(wxEVT_MENU, [this](wxCommandEvent& evt) {
-		int index = HitTest(m_mousePos) + 1;
-		MainFrame::GetInstance()->SetStatusText(std::to_string(index), 1);
-		this->CreateNotePanel(index);
-		this->SetSelection(index);
-		}, createRight->GetId());
-	//open
-	this->Bind(wxEVT_MENU, [this](wxCommandEvent& evt) {
-		MainFrame::GetInstance()->OpenFile();
-		}, open->GetId());
-	//close note
-	this->Bind(wxEVT_MENU, [this](wxCommandEvent& evt) {
-		int ret = MainFrame::GetInstance()->SaveFile(false, true, this->GetSelection());
-		if (ret == wxYES || ret == wxNO) {
-			this->DeleteSelection();
-		}
-		}, closeNote->GetId());
-	//close right
-	this->Bind(wxEVT_MENU, [this](wxCommandEvent& evt) {
-		int index = HitTest(m_mousePos);
-		int deleteCount = m_panelList.size() - 1 - index;
-		for (int i = 1; i <= deleteCount; i++) {
-			this->DeleteNotePanel(index + 1);
-		}
-		}, closeRight->GetId());
-	//close left
-	this->Bind(wxEVT_MENU, [this](wxCommandEvent& evt) {
-		int index = HitTest(m_mousePos);
-		int deleteCount = index;
-		for (int i = 0; i < deleteCount; i++) {
-			this->DeleteNotePanel(0);
-		}
-		}, closeLeft->GetId());
+
+	//accelerator table
+	{
+		wxAcceleratorEntry entries[2];
+		entries[0].Set(wxACCEL_CTRL, (int)'O', open->GetId());
+		entries[1].Set(wxACCEL_CTRL, (int)'W', closeNote->GetId());
+		wxAcceleratorTable table(2, entries);
+		this->SetAcceleratorTable(table);
+	}
+
+	//binding
+	{
+		//create left
+		this->Bind(wxEVT_MENU, [this](wxCommandEvent& evt) {
+			int index = HitTest(m_mousePos);
+			this->CreateNotePanel(index);
+			this->SetSelection(index);
+			}, createLeft->GetId());
+		//create right
+		this->Bind(wxEVT_MENU, [this](wxCommandEvent& evt) {
+			int index = HitTest(m_mousePos) + 1;
+			MainFrame::GetInstance()->SetStatusText(std::to_string(index), 1);
+			this->CreateNotePanel(index);
+			this->SetSelection(index);
+			}, createRight->GetId());
+		//open file
+		this->Bind(wxEVT_MENU, [this](wxCommandEvent& evt) {
+			MainFrame::GetInstance()->OpenFile();
+			}, open->GetId());
+		//close note
+		this->Bind(wxEVT_MENU, [this](wxCommandEvent& evt) {
+			auto notePanel = GetCurrentSelection();
+			int ret = MainFrame::GetInstance()->SaveFile(false, notePanel->NeedingASave(), this->GetSelection());
+			if (ret == wxYES || ret == wxNO) {
+				this->DeleteSelection();
+			}
+
+			}, closeNote->GetId());
+		//close right
+		this->Bind(wxEVT_MENU, [this](wxCommandEvent& evt) {
+			int index = HitTest(m_mousePos);
+			int deleteCount = m_panelList.size() - 1 - index;
+			for (int i = 1; i <= deleteCount; i++) {
+				this->DeleteNotePanel(index + 1);
+			}
+			}, closeRight->GetId());
+		//close left
+		this->Bind(wxEVT_MENU, [this](wxCommandEvent& evt) {
+			int index = HitTest(m_mousePos);
+			int deleteCount = index;
+			for (int i = 0; i < deleteCount; i++) {
+				this->DeleteNotePanel(0);
+			}
+			}, closeLeft->GetId());
+		//open in browser
+		this->Bind(wxEVT_MENU, [this](wxCommandEvent& evt) {
+			int index = this->HitTest(m_mousePos);
+			auto noteHolder = this->GetNotePanelAt(index);
+			if (noteHolder->GetFilePath() == "") {// empty file path to open
+				//open default path
+				wxLaunchDefaultBrowser("C:");
+			}
+			else {
+				wxLaunchDefaultBrowser(SharedData::GetParentPath(noteHolder->GetFilePath()));
+			}
+			}, openInBrower->GetId());
+	}
 }
 
 #pragma region Events
@@ -85,9 +119,9 @@ void NoteManager::OnContextMenu(wxContextMenuEvent& evt) {
 *							PUBIC MEMBER								  *
 **************************************************************************/
 void NoteManager::CreateNotePanel(int index) {
-	static int createCount = 0;
+	static int createCount = 0;//avoid the same name for the new note
 	wxString newPanelName;
-	NoteHolderPanel* note = new NoteHolderPanel(this, "Untitled-" + std::to_string(++createCount) + ".txt");
+	NoteHolderPanel* note = new NoteHolderPanel(this, DEFAULT_NEW_NOTE_NAME + std::to_string(++createCount) + ".txt");
 	this->AddNotePanel(note, true, index);
 }
 void NoteManager::AddNotePanel(NoteHolderPanel* note, bool select, int index) {

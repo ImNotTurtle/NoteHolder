@@ -50,16 +50,15 @@ MainFrame::MainFrame(wxWindow* parent, int id, const wxString& title, wxPoint po
 	Bind(wxEVT_MENU, &MainFrame::OnSaveAs, this, wxID_SAVEAS);
 	Bind(wxEVT_MENU, &MainFrame::OnHelp, this, wxID_HELP);
 	Bind(wxEVT_MENU, &MainFrame::OnQuit, this, wxID_EXIT);
-	Bind(wxEVT_MENU, &MainFrame::OnDelete, this, wxID_DELETE);
+	Bind(wxEVT_MENU, &MainFrame::OnAbout, this, wxID_ABOUT);
 
 	//accelerator table
-	const int entryCount = 5;
+	const int entryCount = 4;
 	wxAcceleratorEntry entries[entryCount];
 	entries[0].Set(wxACCEL_CTRL, (int)('N'), wxID_NEW);
 	entries[1].Set(wxACCEL_CTRL, (int)('O'), wxID_OPEN);
 	entries[2].Set(wxACCEL_CTRL, (int)('S'), wxID_SAVE);
-	entries[3].Set(wxACCEL_CTRL, (int)('W'), wxID_DELETE);
-	entries[4].Set(wxACCEL_CTRL | wxACCEL_SHIFT, (int)('S'), wxID_SAVEAS);
+	entries[3].Set(wxACCEL_CTRL | wxACCEL_SHIFT, (int)('S'), wxID_SAVEAS);
 	
 	wxAcceleratorTable accel(entryCount, entries);
 
@@ -181,18 +180,6 @@ void MainFrame::OnNew(wxCommandEvent& evt){
 }
 void MainFrame::OnOpen(wxCommandEvent& evt){
 	OpenFile();
-}
-void MainFrame::OnDelete(wxCommandEvent& evt) {
-	if (m_noteManager->GetCurrentSelection()->NeedingASave()) {
-		int ret = SaveFile(false, true);
-
-		if (ret != wxCANCEL) {
-			m_noteManager->DeleteSelection();
-		}
-	}
-	else {
-		m_noteManager->DeleteSelection();
-	}
 }
 void MainFrame::OnSave(wxCommandEvent& evt){
 	SaveFile();
