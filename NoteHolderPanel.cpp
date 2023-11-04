@@ -294,7 +294,8 @@ void NoteHolderPanel::SetFileSaveState(bool needToSave) {
 	}
 }
 bool NoteHolderPanel::NeedingASave(void) {
-	return SharedData::EndWith(GetPanelName(), "*");
+	return SharedData::EndWith(GetPanelName(), "*")//has been modified
+		|| this->GetFilePath() == ""; // or no file path to save
 }
 
 void NoteHolderPanel::OnScroll(int wheelRotation, bool ctrlDown, bool shiftDown) {//public scroll for children to access

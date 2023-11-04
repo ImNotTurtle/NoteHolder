@@ -34,6 +34,8 @@ namespace SharedData {
 	wxString ReadFile(wxString filePath);
 	bool WriteFile(wxString filePath, wxString fileContent);
 	void EditFileAtLine(wxString filePath, int lineIndex, wxString replaceBy);
+	wxString GetParentPath(wxString filePath);
+	wxString ConvertToStdPath(wxString filePath);
 }
 
 

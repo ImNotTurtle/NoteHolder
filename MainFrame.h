@@ -40,7 +40,6 @@ private:
 	//menu events
 	void OnNew(wxCommandEvent& evt);
 	void OnOpen(wxCommandEvent& evt);
-	void OnDelete(wxCommandEvent& evt);
 	void OnSave(wxCommandEvent& evt);
 	void OnSaveAs(wxCommandEvent& evt);
 	void OnQuit(wxCommandEvent& evt);

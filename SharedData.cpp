@@ -174,4 +174,28 @@ void SharedData::EditFileAtLine(wxString filePath, int lineIndex, wxString repla
     SharedData::WriteFile(filePath, SharedData::Join(list, "\n"));
 }
 
+wxString SharedData::GetParentPath(wxString filePath) {
+    wxString parentPath;
+    int index = filePath.size() - 1;
+    while (index >= 0 && filePath[index] != '\\') {
+        index--;
+    }
+    for (int i = 0; i < index; i++) {
+        parentPath += filePath[i];
+    }
+    return parentPath;
+}
+wxString SharedData::ConvertToStdPath(wxString filePath) {
+    wxString retPath;
+    for (auto i : filePath) {
+        if (i == '/') {
+            retPath += "\\";
+        }
+        else {
+            retPath += i;
+        }
+    }
+    return retPath;
+}
+
 #pragma endregion
