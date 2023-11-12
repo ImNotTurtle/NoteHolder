@@ -48,7 +48,7 @@ void NoteHolderPanel::Init(wxWindow* parent, wxString panelName) {
 	this->Bind(wxEVT_RIGHT_DOWN, &NoteHolderPanel::OnPanelMouseRightDown, this);
 #pragma endregion
 
-
+	this->SetName("NoteHolderPanel");
 }
 /**************************************************************************
 *							PRIVATE MEMBER								  *
@@ -58,7 +58,7 @@ void NoteHolderPanel::BuildContextMenu(void) {
 	wxMenu* addSubMenu = new wxMenu();
 
 	auto add = m_contextMenu->AppendSubMenu(addSubMenu, wxString::FromUTF8("Thêm ghi chú"));
-	auto save = m_contextMenu->Append(wxID_ANY, wxString::FromUTF8("Lưu file\tCtrl + S"));
+	auto save = m_contextMenu->Append(wxID_ANY, wxString::FromUTF8("Lưu file này\tCtrl + S"));
 	auto clear = m_contextMenu->Append(wxID_ANY, wxString::FromUTF8("Xóa tất cả ghi chú"));
 	auto miniAll = m_contextMenu->Append(wxID_ANY, wxString::FromUTF8("Thu nhỏ tất cả ghi chú"));
 	auto unMiniAll = m_contextMenu->Append(wxID_ANY, wxString::FromUTF8("Phóng to tất cả ghi chú"));
@@ -111,10 +111,16 @@ void NoteHolderPanel::OnPanelResize(wxSizeEvent& evt) {
 	evt.Skip();
 }
 void NoteHolderPanel::OnPanelScroll(wxMouseEvent& evt) {
+	
 	OnScroll(evt.GetWheelRotation(), evt.ControlDown(), evt.ShiftDown());
 }
 void NoteHolderPanel::OnPanelMouseMove(wxMouseEvent& evt) {
 	auto panel = this;
+	wxPoint mousePos;
+	/*wxWindow* window = wxGetActiveWindow();
+	if (window) {
+		SetStatusText(window->GetName());
+	}*/
 	if (evt.LeftIsDown() && evt.Dragging() && panel->HasCapture()) {
 		//calc delta
 		wxPoint deltaPos = evt.GetPosition() - m_captureMousePos;
@@ -299,6 +305,7 @@ bool NoteHolderPanel::NeedingASave(void) {
 }
 
 void NoteHolderPanel::OnScroll(int wheelRotation, bool ctrlDown, bool shiftDown) {//public scroll for children to access
+	
 	auto panel = this;
 	int scrollStep = 5;
 	int scrollRotation = wheelRotation < 0 ? 1 : -1;

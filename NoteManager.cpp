@@ -5,8 +5,8 @@
 
 extern void SetStatusText(wxString text, int index = 0);
 /*
-* PENDING: Open File in browser
-*		  - Show absolute location as tooltip on notebook tab
+* PENDING: Open File in browser : done
+*		  - Show absolute location as tooltip on notebook tab (no needed)
 *		  - Fix notebook out of range when application start up
 
 */

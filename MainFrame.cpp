@@ -5,6 +5,14 @@
 #define MIN_ZOOM					0.4f
 #define MAX_ZOOM					1.6f
 
+/*
+TODO:
+ fixed note width option in menu context (expand on height)
+ fixed note height (expand on width)
+ fixed note size (add both scrollbar to both direction)
+ do not un-minimize notes when save
+*/
+
 MainFrame* MainFrame::instance = NULL;
 
 void SetStatusText(wxString text, int index = 0) {
@@ -118,18 +126,16 @@ void MainFrame::ProgramStart(void) {
 		try {
 			if (dataList[1] != "") {
 				int index = std::stoi(dataList[1].ToStdString());
-				index = SharedData::Clamp(index, 0, (int)m_noteManager->GetPanelList().size() - 1);
+				index = SharedData::Clamp(index, -1, (int)m_noteManager->GetPanelList().size() - 1);
 				m_noteManager->SetSelection(index);
 			}
 			else {
-				m_noteManager->SetSelection(0);
+				m_noteManager->SetSelection(-1);
 			}
 		}
 		catch (...) {
-			m_noteManager->SetSelection(0);
+			m_noteManager->SetSelection(-1);
 		}
-		
-
 	}
 	catch (std::out_of_range) {
 
@@ -137,7 +143,6 @@ void MainFrame::ProgramStart(void) {
 	catch (...) {
 
 	}
-	
 }
 void MainFrame::ProgramQuit(void) {
 	//let the manager decides to quit
@@ -174,7 +179,6 @@ void MainFrame::OnClose(wxCloseEvent& evt) {
 }
 
 #pragma region MenuEvents
-
 void MainFrame::OnNew(wxCommandEvent& evt){
 	m_noteManager->CreateNotePanel();
 }
@@ -196,8 +200,6 @@ void MainFrame::OnHelp(wxCommandEvent& evt) {
 void MainFrame::OnAbout(wxCommandEvent& evt){
 	wxMessageBox("About message");
 }
-
-
 #pragma endregion
 
 
@@ -216,43 +218,51 @@ int MainFrame::SaveFile(bool saveAs, bool askForSave, int index) {
 	
 	//determine which panel to save by index
 	NoteHolderPanel* panel;
-	if (index == -1 || index < 0 || index > m_noteManager->GetPanelList().size()) {
-		panel = m_noteManager->GetCurrentSelection();
-	}
-	else {
-		panel = m_noteManager->GetNotePanelAt(index);
+	{
+		if (index == -1 || index < 0 || index > m_noteManager->GetPanelList().size()) {
+			panel = m_noteManager->GetCurrentSelection();
+		}
+		else {
+			panel = m_noteManager->GetNotePanelAt(index);
+		}
 	}
 	
 	int statusIndex = 0;
 	wxString savePath = panel->GetFilePath();
 	//empty file location or the user ask to save as new file, open file dialog to choose location
-	if (panel->GetFilePath() == "" || saveAs) {
-		wxFileDialog* dialog = new wxFileDialog(this, wxString::FromUTF8("Chọn đường dẫn để lưu file"), APP_CWD, "", "*.txt", wxFD_SAVE);
-		int ret = dialog->ShowModal();
-		if (ret == wxID_OK) {
-			if (!saveAs) { // only change the panel path when user ask to save, not save as
-				panel->SetFilePath(dialog->GetPath());
+	{
+		if (panel->GetFilePath() == "" || saveAs) {
+			wxFileDialog* dialog = new wxFileDialog(this, wxString::FromUTF8("Chọn đường dẫn để lưu file"), APP_CWD, "", "*.txt", wxFD_SAVE);
+			int ret = dialog->ShowModal();
+			if (ret == wxID_OK) {
+				if (!saveAs) { // only change the panel path when user ask to save, not save as
+					panel->SetFilePath(dialog->GetPath());
+				}
+				savePath = dialog->GetPath();
 			}
-			savePath = dialog->GetPath();
+			else {
+				return wxCANCEL;
+			}
+			dialog->Destroy();
 		}
-		else {
-			return wxCANCEL;
-		}
-		dialog->Destroy();
 	}
 	//export content to path
-	if (panel->ExportToFile(savePath)) {
-		SetStatusText(wxString::FromUTF8("Lưu file thành công."), statusIndex);
-	}
-	else {
-		SetStatusText(wxString::FromUTF8("Lưu file thất bại."), statusIndex);
+	{
+		if (panel->ExportToFile(savePath)) {
+			SetStatusText(wxString::FromUTF8("Lưu file thành công."), statusIndex);
+		}
+		else {
+			SetStatusText(wxString::FromUTF8("Lưu file thất bại."), statusIndex);
+		}
 	}
 	//erase status after 5 seconds
-	std::thread thread = std::thread{ [this, statusIndex]() {
+	{
+		std::thread thread = std::thread{ [this, statusIndex]() {
 		std::this_thread::sleep_for(std::chrono::seconds(5));
 		SetStatusText("", statusIndex);
 	} };
-	thread.detach();
+		thread.detach();
+	}
 	return wxYES;
 }
 void MainFrame::OpenFile(void) {
