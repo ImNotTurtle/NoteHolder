@@ -10,7 +10,7 @@ enum NOTE_TYPE_e {
 class NotePanel;
 
 class NotePad : public wxWindow
-{
+{//base class for variants of pad: textpad, listpad
 public:
 	NotePad(NotePanel* parent);
 
@@ -18,6 +18,8 @@ public:
 	virtual void SetContentFontSize(int size);
 
 	virtual NOTE_TYPE_e GetType(void);
+
+	virtual void ReceiveTabNavigation(void);
 
 
 	virtual void FromJson(wxString json);

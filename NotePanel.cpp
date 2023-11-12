@@ -9,18 +9,25 @@ extern void SetStatusText(wxString text, int index = 0);
 
 *******************************************************************/
 #define BORDER_SIZE					(3)
-#define MIN_SIZE					(wxSize(150, 60))
 #define NUMBER(x)					(std::stoi(x))
 #define STRING(x)					(std::to_string(x))
 #define PAIR(p)						(std::to_string(p.x) + "," + std::to_string(p.y))
 
-#define DEFAULT_HOVER_COLOR			(wxColour(204, 208, 230))
-#define DEFAULT_HEADER_FONT_SIZE	(14)
-#define DEFAULT_HEADER_FONT			(wxFontInfo(DEFAULT_HEADER_FONT_SIZE))
-#define DEFAULT_CONTENT_FONT_SIZE	(7)
-#define DEFAULT_CONTENT_FONT		(wxFontInfo(DEFAULT_CONTENT_FONT_SIZE))
-#define DEFAULT_PANEL_COLOR			(wxColour(180, 197, 240))
-#define DEFAULT_DRAG_PANEL_COLOR	(wxColour(124, 157, 242))
+#define HOVER_DEFAULT_COLOR			(wxColour(204, 208, 230))
+
+#define HEADER_DEFAULT_MIN_SIZE		(wxSize(50, 36))
+#define HEADER_DEFAULT_FONT_SIZE	(14)
+#define HEADER_DEFAULT_FONT			(wxFontInfo(HEADER_DEFAULT_FONT_SIZE))
+
+#define CONTENT_DEFAULT_FONT_SIZE	(7)
+#define CONTENT_DEFAULT_FONT		(wxFontInfo(CONTENT_DEFAULT_FONT_SIZE))
+
+#define PANEL_DEFAULT_COLOR			(wxColour(180, 197, 240))
+
+#define DRAG_PANEL_DEFAULT_COLOR	(wxColour(124, 157, 242))
+#define DRAG_PANEL_MIN_SIZE			(wxSize(20, 10))
+
+#define BUTTON_DEFAULT_MIN_SIZE		(wxSize(18, 18))
 
 #define CHILD_CHANGED				(m_parent->OnChildChanged())
 
@@ -50,34 +57,33 @@ NotePanel::NotePanel(NoteHolderPanel* parent, NOTE_TYPE_e type){
 }
 void NotePanel::Init(NoteHolderPanel* parent, NOTE_TYPE_e type) {
 	wxPanel::Create(parent, -1, wxDefaultPosition, wxDefaultSize, wxBORDER_SIMPLE);
+#pragma region Init
 	m_parent = parent;
 	m_resizeDirection = NONE;
-	m_headerFontSize = DEFAULT_HEADER_FONT_SIZE;
-	m_contentFontSize = DEFAULT_CONTENT_FONT_SIZE;
-	m_minimizeHoverColor = DEFAULT_HOVER_COLOR;
-	m_closeHoverColor = DEFAULT_HOVER_COLOR;
+	m_headerFontSize = HEADER_DEFAULT_FONT_SIZE;
+	m_contentFontSize = CONTENT_DEFAULT_FONT_SIZE;
+	m_minimizeHoverColor = HOVER_DEFAULT_COLOR;
+	m_closeHoverColor = HOVER_DEFAULT_COLOR;
 	m_isMinimized = false;
 	m_rightDown = false;
-
-
-#pragma region Init
 	m_dragPanel = new wxPanel(this, -1, wxDefaultPosition, wxSize(1, 1));
-	m_headerTC = new wxTextCtrl(this, -1, wxString::FromUTF8("Tiêu đề"), wxDefaultPosition, wxSize(1, 1), wxTE_CENTER | wxTE_NO_VSCROLL | wxBORDER_NONE);
+	m_headerTC = new wxTextCtrl(this, -1, wxString::FromUTF8("Tiêu đề"), wxDefaultPosition, 
+		wxSize(1, 1), wxTE_CENTER | wxBORDER_NONE);
 	CreateNotePad(type);
 	m_miniButton = new wxButton(this, -1, "", wxDefaultPosition, wxSize(1, 1), wxBORDER_NONE);
 	m_closeButton = new wxButton(this, -1, "", wxDefaultPosition, wxSize(1, 1), wxBORDER_NONE);
 
-	m_headerTC->SetMinSize(wxSize(50, 36));
-	m_dragPanel->SetMinSize(wxSize(20, 10));
-	this->SetMinSize(MIN_SIZE);
-	this->SetHeaderFontSize(DEFAULT_HEADER_FONT_SIZE);
-	this->SetContentFontSize(DEFAULT_CONTENT_FONT_SIZE);
-	this->SetColor(DEFAULT_PANEL_COLOR);
-	this->SetDragPanelColor(DEFAULT_DRAG_PANEL_COLOR);
+	m_headerTC->SetMinSize(HEADER_DEFAULT_MIN_SIZE);
+	m_dragPanel->SetMinSize(DRAG_PANEL_MIN_SIZE);
+	this->SetMinSize(NOTE_PANEL_MIN_SIZE);
+	this->SetHeaderFontSize(HEADER_DEFAULT_FONT_SIZE);
+	this->SetContentFontSize(CONTENT_DEFAULT_FONT_SIZE);
+	this->SetColor(PANEL_DEFAULT_COLOR);
+	this->SetDragPanelColor(DRAG_PANEL_DEFAULT_COLOR);
 	m_miniButton->SetBackgroundColour(m_dragPanel->GetBackgroundColour());
-	m_miniButton->SetMinSize(wxSize(18, 18));
+	m_miniButton->SetMinSize(BUTTON_DEFAULT_MIN_SIZE);
 	m_closeButton->SetBackgroundColour(m_dragPanel->GetBackgroundColour());
-	m_closeButton->SetMinSize(wxSize(18, 18));
+	m_closeButton->SetMinSize(BUTTON_DEFAULT_MIN_SIZE);
 #pragma endregion
 
 
@@ -85,13 +91,13 @@ void NotePanel::Init(NoteHolderPanel* parent, NOTE_TYPE_e type) {
 	wxBoxSizer* mainSizerV = new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer* topSizerV = new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer* dragSizerH = new wxBoxSizer(wxHORIZONTAL);
-	dragSizerH->Add(m_dragPanel, 34, wxEXPAND);
-	dragSizerH->Add(m_miniButton, 1);
-	dragSizerH->Add(m_closeButton, 1);
+	dragSizerH->Add(m_dragPanel, 1, wxEXPAND);
+	dragSizerH->Add(m_miniButton, 0);
+	dragSizerH->Add(m_closeButton, 0);
 	topSizerV->Add(dragSizerH, 3, wxEXPAND);
 	topSizerV->Add(m_headerTC, 6, wxEXPAND | wxLEFT | wxRIGHT, BORDER_SIZE);
 	mainSizerV->Add(topSizerV, 0, wxEXPAND);
-	mainSizerV->Add(m_notepad, 10, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, BORDER_SIZE);
+	mainSizerV->Add(m_notepad, 1, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, BORDER_SIZE);
 	this->SetSizer(mainSizerV);
 #pragma endregion
 
@@ -124,22 +130,24 @@ void NotePanel::Init(NoteHolderPanel* parent, NOTE_TYPE_e type) {
 	//m_headerTC
 	{
 		m_headerTC->Bind(wxEVT_TEXT, &NotePanel::OnHeaderTextChanged, this);
-		//m_headerTC->Bind(wxEVT_CHAR_HOOK, &NotePanel::OnCharHook, this);
+		m_headerTC->Bind(wxEVT_CHAR_HOOK, &NotePanel::OnHeaderCharHook, this);
 	}
 
 	//this
 	{
+		this->Bind(wxEVT_SIZE, &NotePanel::OnResize, this);
 		this->Bind(wxEVT_MOTION, &NotePanel::OnMouseMove, this);
 		this->Bind(wxEVT_LEFT_UP, &NotePanel::OnMouseLeftUp, this);
 		this->Bind(wxEVT_LEFT_DOWN, &NotePanel::OnMouseLeftDown, this);
 		this->Bind(wxEVT_LEAVE_WINDOW, &NotePanel::OnMouseLeave, this);
 	}
 
-	BindingEventRecursive(this);
+	//recursive
+	{
+		BindingEventRecursive(this);
+	}
 #pragma endregion
 
-	this->SetMinSize(MIN_SIZE);
-	this->Layout();
 	this->SetDoubleBuffered(true);
 }
 /**************************************************************************
@@ -183,6 +191,21 @@ void NotePanel::SetHeaderText(wxString text){
 void NotePanel::SetContentText(wxString text){
 	m_notepad->SetLabel(text);
 }
+void NotePanel::ResetToDefaultSize(bool resetWidth, bool resetHeight) {
+	wxSize newSize = this->GetSize();
+	if (resetWidth) {
+		newSize.x = DEFAULT_NOTE_PANEL_SIZE.x;
+	}
+	if (resetHeight) {
+		newSize.y = DEFAULT_NOTE_PANEL_SIZE.y;
+	}
+	float zoomFactor = m_parent->GetZoomFactor();
+	m_originRect.SetWidth(newSize.x * zoomFactor);
+	m_originRect.SetHeight(newSize.y * zoomFactor);
+
+	this->UpdateSize();
+	this->Layout();
+}
 
 wxRect& NotePanel::GetOriginRect(void){
 	return m_originRect;
@@ -194,13 +217,15 @@ wxString NotePanel::GetContentText(void){
 	return m_notepad->ToJson();
 }
 
-void NotePanel::UpdateSize(void) {//set the panel size to match with the origin rect size and zoom factor
+void NotePanel::UpdateSize(void) {
+	//set the panel size to match with the origin rect size and zoom factor
 	float zoomFactor = m_parent->GetZoomFactor();
 	wxSize panelSize = m_originRect.GetSize() * zoomFactor;
 	this->SetSize(panelSize);
 	this->Layout();
 }
-void NotePanel::UpdateOnZoom(void) {//update size, position, font size and header alignment based on zoom factor
+void NotePanel::UpdateOnZoom(void) {
+	//update size, position, font size and header alignment based on zoom factor
 	//align left the header when zoom out (0.7f)
 	float zoomFactor = m_parent->GetZoomFactor();
 	if (zoomFactor <= 0.7f) {
@@ -219,19 +244,18 @@ void NotePanel::UpdateOnZoom(void) {//update size, position, font size and heade
 }
 
 //child events
-void NotePanel::OnChildSizeReport(wxSize childSize) {//this function is used when the note panel children wants to change the parent size 
+void NotePanel::OnChildSizeReport(wxSize childSize) {
+	// this function is used when the note panel children wants to change the parent size 
 	float zoomFactor = m_parent->GetZoomFactor();
-	// rescale zoomFactor to get the origin width and height
-	int originWidth = m_originRect.width * 1.0f / zoomFactor;
-	int originHeight = m_originRect.height * 1.0f / zoomFactor;
-	// calculate the ratio between parent and child
-	float widthRatio = originWidth * 1.0f / m_notepad->GetSize().x;
-	float heightRatio = originHeight * 1.0f / m_notepad->GetSize().y;
-	int newWidth = childSize.x * widthRatio;
-	int newHeight = childSize.y * heightRatio;
-	m_originRect.SetWidth(newWidth * zoomFactor);
-	m_originRect.SetHeight(newHeight * zoomFactor);
+	int newWidth = GetChildSizeDiff().x + childSize.x * zoomFactor;
+	int newHeight = GetChildSizeDiff().y + childSize.y * zoomFactor;
+	//clamp the size
+	newWidth = SharedData::Max(newWidth, (int)(NOTE_PANEL_MIN_SIZE.x * zoomFactor));
+	newHeight = SharedData::Max(newHeight, (int)(NOTE_PANEL_MIN_SIZE.y * zoomFactor));
+	m_originRect.SetWidth(newWidth);
+	m_originRect.SetHeight(newHeight);
 	this->UpdateSize();
+
 	CHILD_CHANGED;
 }
 void NotePanel::OnChildChanged(void) {//propagates upward child changed event
@@ -276,12 +300,17 @@ void NotePanel::FromJson(wxString json) {
 	}
 }
 wxString NotePanel::ToJson(void) {
-	if(m_isMinimized == true) SetMinimize(false); // is minimizing, un minimize it before save
+	//if(m_isMinimized == true) SetMinimize(false); // is minimizing, un minimize it before save
+	wxSize noteSize = m_originRect.GetSize();
+	if (m_isMinimized) {
+		//if the note is minimized, take the m_originSize as the note size
+		noteSize = m_originSize;
+	}
 	wxString retStr;
 	retStr += "{";
 	retStr += "\"type\":[" + NotePad::GetTypeString(m_notepad->GetType()) + "],";
 	retStr += "\"pos\":[" + PAIR(m_originRect.GetPosition()) + "],";
-	retStr += "\"size\":[" + PAIR(m_originRect.GetSize()) + "],";
+	retStr += "\"size\":[" + PAIR(noteSize) + "],";
 	retStr += "\"header\":[@\"" + m_headerTC->GetValue() + "\"#],";
 	retStr += m_notepad->ToJson();
 	retStr += "},";
@@ -310,7 +339,7 @@ void NotePanel::SetMinimize(bool minimized) {
 	if (minimized) {//the user asks to minimize
 		if (!m_isMinimized) {//but the note has to be un-minimize
 			m_originSize = m_originRect.GetSize();
-			m_originRect.SetSize(wxSize(m_originRect.GetSize().x, MIN_SIZE.y));
+			m_originRect.SetSize(wxSize(m_originRect.GetSize().x, NOTE_PANEL_MIN_SIZE.y));
 			m_notepad->Hide();
 		}
 	}
@@ -321,18 +350,17 @@ void NotePanel::SetMinimize(bool minimized) {
 		}
 	}
 	m_isMinimized = minimized;
-	this->UpdateOnZoom();
+	this->UpdateSize();
 }
 void NotePanel::BindingEventRecursive(wxWindow* window) {
+	if (window == NULL) return;
 	window->Bind(wxEVT_SET_FOCUS, &NotePanel::OnFocus, this);
 	window->Bind(wxEVT_RIGHT_DOWN, [this](wxMouseEvent& evt) {
 		m_rightDown = true;
 		evt.Skip();
 	});
-	window->Bind(wxEVT_MOUSEWHEEL, [this](wxMouseEvent& evt) {
-		evt.Skip(); 
-		m_parent->OnScroll(evt.GetWheelRotation(), evt.ControlDown(), evt.ShiftDown()); 
-	});
+	//window->GetEvtHandlerEnabled()
+	window->Bind(wxEVT_MOUSEWHEEL, &NotePanel::OnMouseScroll, this);
 
 	auto childs = window->GetChildren();
 	for (auto child : childs) {
@@ -354,6 +382,11 @@ void NotePanel::CreateNotePad(NOTE_TYPE_e type) {
 		break;
 	}
 	this->Layout();
+}
+wxSize NotePanel::GetChildSizeDiff(void) {
+	//this function returns the different between the note size and the child size
+	//which turns out to be the drag panel + header + border size
+	return this->GetSize() - m_notepad->GetSize();
 }
 
 #pragma region Events
@@ -405,8 +438,22 @@ void NotePanel::OnHeaderTextChanged(wxCommandEvent& evt) {//adjust width when us
 	}
 	evt.Skip();
 }
+void NotePanel::OnHeaderCharHook(wxKeyEvent& evt) {
+	//set the note pad to receive tab navigation
+	if (evt.GetKeyCode() == WXK_TAB) {
+		m_notepad->ReceiveTabNavigation();
+	}
+	else {
+		
+		evt.Skip();
+	}
+}
 
-// resizing
+// this - resizing
+void NotePanel::OnResize(wxSizeEvent& evt) {
+	this->Layout();
+	evt.Skip();
+}
 void NotePanel::OnMouseMove(wxMouseEvent& evt){
 	auto panel = this;
 	RESIZE_DIRECTION direction = GetCurrentResizeDirection(evt.GetPosition());
@@ -455,15 +502,15 @@ void NotePanel::OnMouseMove(wxMouseEvent& evt){
 		}
 
 		bool moveX = true;
-		if ((m_prevPanelSize + size).x <= MIN_SIZE.x * m_parent->GetZoomFactor()) {//if min width then no change position on x direction
+		if ((m_prevPanelSize + size).x <= NOTE_PANEL_MIN_SIZE.x * m_parent->GetZoomFactor()) {//if min width then no change position on x direction
 			moveX = false;
 		}
 		if (moveX == true) {
 			m_originRect.SetPosition(m_prevRectPos + pos);
 			this->SetPosition(m_prevPanelPos + pos);
 		}
-		m_originRect.SetSize(ClampMinSize(m_prevRectSize + size, MIN_SIZE));//make sure the size wont below min size even after zooming
-		this->SetSize(ClampMinSize(m_prevPanelSize + size, MIN_SIZE));
+		m_originRect.SetSize(ClampMinSize(m_prevRectSize + size, NOTE_PANEL_MIN_SIZE));//make sure the size wont below min size even after zooming
+		this->SetSize(ClampMinSize(m_prevPanelSize + size, NOTE_PANEL_MIN_SIZE));
 
 		CHILD_CHANGED;
 	}
@@ -497,7 +544,7 @@ void NotePanel::OnMinimizeButtonMouseEnter(wxMouseEvent& evt) {
 	m_miniButton->Refresh();
 }
 void NotePanel::OnMinimizeButtonMouseLeave(wxMouseEvent& evt) {
-	m_minimizeHoverColor = DEFAULT_HOVER_COLOR;
+	m_minimizeHoverColor = HOVER_DEFAULT_COLOR;
 	m_miniButton->Refresh();
 }
 void NotePanel::OnMinimizeButtonMouseLeftDown(wxMouseEvent& evt) {
@@ -526,10 +573,17 @@ void NotePanel::OnCloseButtonMouseEnter(wxMouseEvent& evt) {
 	m_closeButton->Refresh();
 }
 void NotePanel::OnCloseButtonMouseLeave(wxMouseEvent& evt) {
-	m_closeHoverColor = DEFAULT_HOVER_COLOR;
+	m_closeHoverColor = HOVER_DEFAULT_COLOR;
 	m_closeButton->Refresh();
 }
 void NotePanel::OnCloseButtonMouseLeftDown(wxMouseEvent& evt) {
+	//do warning before delete the note
+	wxMessageDialog* dialog = new wxMessageDialog(this,
+		wxString::FromUTF8("Bạn muốn xóa ghi chú này?\nHành động này không thể hoàn tác"),
+		wxString::FromUTF8("Xác nhận"), wxYES_NO | wxCENTER | wxICON_WARNING);
+	dialog->SetYesNoLabels(wxString::FromUTF8("Có"), wxString::FromUTF8("Không"));
+	int ret = dialog->ShowModal();
+	if (ret != wxID_YES) return;
 	CHILD_CHANGED;
 	m_parent->DeleteNote(this);
 	this->Destroy();
@@ -553,10 +607,21 @@ void NotePanel::OnCloseButtonPaint(wxPaintEvent& evt) {
 }
 #pragma endregion
 
+
 void NotePanel::OnFocus(wxFocusEvent& evt) {//raise panel when received focus
 	auto window = static_cast<wxWindow*>(evt.GetEventObject());
 	if (window) {
 		this->Raise();
+	}
+	evt.Skip();
+}
+void NotePanel::OnMouseScroll(wxMouseEvent& evt) {
+	//scroll parent if the window dont have the scroll bar
+	wxWindow* window = static_cast<wxWindow*>(evt.GetEventObject());
+	if (window) {
+		if (window->GetScrollThumb(wxVERTICAL) == 0) {
+			m_parent->OnScroll(evt.GetWheelRotation(), evt.ControlDown(), evt.ShiftDown());
+		}
 	}
 	evt.Skip();
 }

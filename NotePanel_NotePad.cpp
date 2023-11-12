@@ -20,6 +20,9 @@ wxString NotePad::ToJson(void) {
 NOTE_TYPE_e NotePad::GetType(void) {
 	return NOT_SET;
 }
+void NotePad::ReceiveTabNavigation(void) {
+
+}
 
 void NotePad::SetColor(wxColour color) {
 	this->SetBackgroundColour(color);
