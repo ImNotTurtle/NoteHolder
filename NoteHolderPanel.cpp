@@ -235,6 +235,9 @@ void NoteHolderPanel::SetFilePath(wxString filePath) {
 float NoteHolderPanel::GetZoomFactor(void){
 	return m_zoomFactor;
 }
+wxVector<NotePanel*> NoteHolderPanel::GetNoteList(void) {
+	return m_noteList;
+}
 wxString NoteHolderPanel::GetPanelName(void) {
 	return m_panelName;
 }
@@ -249,6 +252,7 @@ void NoteHolderPanel::UpdateNotePanel(void){
 	}
 }
 void NoteHolderPanel::ImportFromFile(wxString filePath){
+	
 	wxString fileContent = SharedData::ReadFile(filePath);
 	FromJson(fileContent);
 	SetFilePath(filePath);
@@ -261,7 +265,7 @@ bool NoteHolderPanel::ExportToFile(wxString filePath){
 }
 
 void NoteHolderPanel::FromJson(wxString json){
-	auto noteList = SharedData::SplitByStartAndEnd(json, "{", "},");
+	auto noteList = SharedData::SplitByStartAndEnd(json, "{", "}");
 	if (noteList.size() == 0) return;
 	for (int i = 0; i < noteList.size(); i++) {
 		if (noteList[i] == "") continue;//skip empty json

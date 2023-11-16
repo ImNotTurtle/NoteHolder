@@ -27,6 +27,9 @@ public:
 	NoteHolderPanel* GetNotePanelAt(int index);
 	std::vector<NoteHolderPanel*> GetPanelList(void);
 
+	void FromJson(wxString json);
+	wxString ToJson(void);
+
 	bool OnQuit(void);//return true if the program should quit
 	
 private:
@@ -40,4 +43,3 @@ private:
 	void OnContextMenu(wxContextMenuEvent& evt);
 
 };
-#include "MainFrame.h"

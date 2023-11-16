@@ -23,12 +23,12 @@ namespace SharedData {
 	template<typename T> T Clamp(T value, T min, T max);
 
 	//string manipulations
-	std::vector<wxString> Split(wxString str, wxString splitBy, int splitCount = -1);
-	std::vector<wxString> SplitByStartAndEnd(wxString str, wxString startWith, wxString endWith);
+	wxVector<wxString> Split(wxString str, wxString splitBy, int splitCount = -1);
+	wxVector<wxString> SplitByStartAndEnd(wxString str, wxString startWith, wxString endWith);
 	wxString SplitAndTake(wxString str, wxString splitBy, int takeIndex, int splitCount = -1);
 	bool StartWith(wxString str, wxString startWith);
 	bool EndWith(wxString str, wxString endWith);
-	wxString Join(std::vector<wxString> list, wxString joinBy);
+	wxString Join(wxVector<wxString> list, wxString joinBy, int startIndex = 0, int endIndex = -1);
 
 	//file manipulations
 	wxString ReadFile(wxString filePath);

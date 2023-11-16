@@ -157,7 +157,65 @@ std::vector<NoteHolderPanel*> NoteManager::GetPanelList(void) {
 	return m_panelList;
 }
 
-bool NoteManager::OnQuit(void) {
+void NoteManager::FromJson(wxString json){
+	/*format:
+		first line is list of latest working paths,
+		second line is the last selected note holder panel index
+	*/
+	auto dataList = SharedData::Split(json, "\n");
+	if (dataList.size() != 2) return;
+	// first line process
+	{
+		// is surrounded by []
+		if (SharedData::StartWith(dataList[0], "[") && SharedData::EndWith(dataList[0], "]")) {
+			dataList[0].Remove(0, 1); // remove [
+			dataList[0].RemoveLast(1); // remove ]
+			auto pathList = SharedData::Split(dataList[0], ",");
+			for (auto path : pathList) {
+				if (wxFile::Exists(path)) {//check if the file still exists
+					this->CreateNotePanel();
+					this->GetCurrentSelection()->ImportFromFile(path);
+				}
+			}
+		}
+	}
+
+	// second line process
+	{
+		if (dataList[1] != "") {
+			try {
+				int index = std::stoi(dataList[1].ToStdString());
+				index = SharedData::Clamp(index, -1, (int)this->GetPanelList().size() - 1);
+				this->SetSelection(index);
+			}
+			catch (...) {
+				this->SetSelection(-1);
+			}
+			
+		}
+	}
+}
+wxString NoteManager::ToJson(void){
+	wxString json;
+	//save all working paths
+	auto panelList = this->GetPanelList();
+	wxString rowContent = "[";
+	for (int i = 0; i < panelList.size(); i++) {
+		if (wxFile::Exists(panelList[i]->GetFilePath())) {
+			rowContent += panelList[i]->GetFilePath() + ",";
+		}
+	}
+	rowContent += "]";
+	json += rowContent + "\n";
+
+	//save the last select panel
+	rowContent = std::to_string(this->GetSelection());
+	json += rowContent + "\n";
+
+	return json;
+}
+
+bool NoteManager::OnQuit(void) {//ask user to save un-save files before quit
 	//------------create a dialog and ask user to choose files to save
 	wxDialog* dialog = new wxDialog(this, -1, wxString::FromUTF8("Lưu File trước khi thoát"), wxDefaultPosition, wxDefaultSize,
 		wxCLOSE_BOX | wxCAPTION);

@@ -1,2 +1,2 @@
-[D:\Projects\C++\NoteHolder\MyResources\Logs\discord.txt]
+[D:\Projects\C++\NoteHolder\MyResources\Logs\discord.txt,D:\Projects\C++\NoteHolder\MyResources\Logs\abc.txt,]
 0

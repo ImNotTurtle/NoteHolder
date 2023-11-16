@@ -41,6 +41,7 @@ public:
 	void ResetToDefaultSize(bool resetWidth, bool resetHeight);
 
 	wxRect& GetOriginRect(void);
+	NotePad* GetNotePad(void);
 	wxString GetHeaderText(void);
 	wxString GetContentText(void);
 
@@ -62,12 +63,13 @@ private:
 	wxRect m_originRect;
 	wxButton* m_miniButton;
 	wxButton* m_closeButton;
+
 	int m_headerFontSize;
 	int m_contentFontSize;
 	wxColour m_minimizeHoverColor;//hover color for minimize button
 	wxColour m_closeHoverColor;//hover color for close button
 	bool m_rightDown;
-	//wxMenu* m_contextMenu; // right click menu
+	wxMenu* m_contextMenu; // right click menu
 
 	//private usage for resizing panel
 	wxPoint m_prevRectPos;//save rect position when left down
@@ -90,6 +92,10 @@ private:
 	RESIZE_DIRECTION GetCurrentResizeDirection(wxPoint mousePos);
 	void BindingEventRecursive(wxWindow* window);
 	wxSize GetChildSizeDiff(void); // get the size different between m_notepad and the note its self 
+	void SetNoteState(wxString state);
+	wxString GetNoteState(void); // return the note state
+	void BuildContextMenu(void);
+	
 
 	//on drag panel
 	void OnDragPanelMouseMove(wxMouseEvent& evt);
@@ -104,8 +110,10 @@ private:
 	void OnMouseMove(wxMouseEvent& evt);
 	void OnMouseLeave(wxMouseEvent& evt);
 	void OnMouseLeftDown(wxMouseEvent& evt);
+	void OnMouseRightDown(wxMouseEvent& evt);
 	void OnMouseLeftUp(wxMouseEvent& evt);
-	//void OnContextMenu(wxContextMenuEvent& evt);
+	void OnContextMenu(wxContextMenuEvent& evt);
+	void OnMenuUpdateUI(wxUpdateUIEvent& evt);
 
 	void OnMinimizeButtonMouseEnter(wxMouseEvent& evt);
 	void OnMinimizeButtonMouseLeave(wxMouseEvent& evt);
