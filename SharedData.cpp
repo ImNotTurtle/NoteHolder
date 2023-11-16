@@ -11,8 +11,8 @@ extern void SetStatusText(wxString text, int index = 0);
 
 
 #pragma region StringManipulations
-std::vector<wxString> SharedData::Split(wxString str, wxString splitBy, int splitCount) {
-    std::vector<wxString> retList;
+wxVector<wxString> SharedData::Split(wxString str, wxString splitBy, int splitCount) {
+    wxVector<wxString> retList;
     wxString accumStr;
     wxString tempStr;
     int splitIndex = 0;
@@ -20,36 +20,50 @@ std::vector<wxString> SharedData::Split(wxString str, wxString splitBy, int spli
     if (splitCount == -1) {
         splitCount = (int)(str.length());//if no split count provided, make it largest as possible 
     }
-    for (int i = 0; i < str.length(); i++) {
-        if (str[i] == splitBy[splitIndex] && curSplitCount < splitCount) {
-            splitIndex++;
-            tempStr += str[i];
-            if (splitIndex == splitBy.length()) {
-                splitIndex = 0;
-                curSplitCount++;
-                if (accumStr != "") retList.push_back(accumStr);
-                accumStr = "";
-                tempStr = "";
-            }
-        }
-        else {
-            if (splitIndex != 0) {
-                accumStr += tempStr;
-                tempStr = "";
-                i--;
-                splitIndex = 0;
-            }
-            else accumStr += str[i];
+    //if the split by is null, split the list into list of character
+    if (splitBy == "") {
+        for (auto x : str) {
+            retList.push_back(x);
         }
     }
-    if (accumStr != "") {
-        if (tempStr != "") accumStr += tempStr;
-        retList.push_back(accumStr);
+    else {//split by is not null
+        for (int i = 0; i < str.length(); i++) {
+            //if the string start to match with the split by string
+            if (str[i] == splitBy[splitIndex] && curSplitCount < splitCount) {
+                splitIndex++;
+                tempStr += str[i];
+                //if the string fully match with the split by string
+                if (splitIndex == splitBy.length()) {
+                    //add accum str to the list and reset
+                    splitIndex = 0;
+                        curSplitCount++;
+                        if (accumStr != "") retList.push_back(accumStr);
+                        accumStr = "";
+                        tempStr = "";
+                }
+            }
+            else {
+                //if the string does not match with the split by string
+                if (splitIndex != 0) {//if the string nearly match with the split by string before
+                    //add them to the accum string
+                    accumStr += tempStr;
+                    tempStr = "";
+                    splitIndex = 0;
+                }
+
+                else accumStr += str[i];
+            }
+        }
+        if (accumStr != "") {
+            if (tempStr != "") accumStr += tempStr;
+            retList.push_back(accumStr);
+        }
     }
+    
     return retList;
 }
-std::vector<wxString> SharedData::SplitByStartAndEnd(wxString str, wxString startWith, wxString endWith) {
-    std::vector<wxString> retList;
+wxVector<wxString> SharedData::SplitByStartAndEnd(wxString str, wxString startWith, wxString endWith) {
+    wxVector<wxString> retList;
 
     int startIndex = 0, endIndex = 0;
     bool startDetect = false, endDetect = false;
@@ -141,10 +155,15 @@ bool SharedData::EndWith(wxString str, wxString endWith) {
     }
     return xIndex == -1;
 }
-wxString SharedData::Join(std::vector<wxString> list, wxString joinBy) {
+wxString SharedData::Join(wxVector<wxString> list, wxString joinBy, int startIndex, int endIndex) {
+    if (startIndex >= list.size()) return "";
+
+    endIndex = SharedData::Clamp(endIndex, -1, (int)(list.size() - 1));
+    if (endIndex == -1) endIndex = list.size() - 1;
+    
     wxString retStr = "";
-    for (auto x : list) {
-        retStr += x + joinBy;
+    for (int i = startIndex; i <= endIndex; i++) {
+        retStr += list[i] + joinBy;
     }
     return retStr;
 }

@@ -26,6 +26,7 @@ public:
 	void SetFilePath(wxString filePath);
 
 	float GetZoomFactor(void);
+	wxVector<NotePanel*> GetNoteList(void);
 	wxString GetPanelName(void);
 	wxString GetFilePath(void);
 
@@ -50,7 +51,7 @@ private:
 	float m_zoomFactor;
 	wxPoint m_captureMousePos;
 	wxPoint m_captureViewStart;
-	std::vector<NotePanel*> m_noteList;
+	wxVector<NotePanel*> m_noteList;
 	wxMenu* m_contextMenu;
 	bool m_rightDown;
 

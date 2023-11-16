@@ -6,14 +6,14 @@
 //use this macro whenever you wish to change the data
 #define CHILD_CHANGED							(m_parent->OnChildChanged())
 
+
+
+
 extern void SetStatusText(wxString text, int index = 0);
 
 //menu id
-const int wxID_FIT_CONTENT = wxNewId();
 const int wxID_ERASE_ALL = wxNewId();
 const int wxID_SELECT_ALL = wxNewId();
-const int wxID_FIXED_WIDTH = wxNewId();
-const int wxID_FIXED_HEIGHT = wxNewId();
 const int wxID_FIXED_SIZE = wxNewId();
 
 static int GetLineMaxWidth(wxWindow* window, wxString content) {
@@ -49,9 +49,6 @@ TextPad::TextPad(NotePanel* parent)
 	m_parent = parent;
 	m_tctrl = new wxTextCtrl(this, -1, "", wxDefaultPosition, wxDefaultSize, 
 		wxTE_PROCESS_ENTER | wxTE_MULTILINE | wxBORDER_SIMPLE);
-	m_tctrl->SetName("tctrl");
-	this->SetName("TextPad");
-	BuildContextMenu();
 
 #pragma endregion
 
@@ -68,21 +65,13 @@ TextPad::TextPad(NotePanel* parent)
 	//this
 	{
 		this->Bind(wxEVT_SIZE, &TextPad::OnResize, this);
-		
 	}
 
 	//m_tctrl
 	{
 		m_tctrl->Bind(wxEVT_CHAR_HOOK, &TextPad::OnCharHook, this);
 		m_tctrl->Bind(wxEVT_TEXT_PASTE, &TextPad::OnTextPaste, this);
-		m_tctrl->Bind(wxEVT_CONTEXT_MENU, &TextPad::OnContextMenu, this);
-		m_tctrl->Bind(wxEVT_RIGHT_DOWN, &TextPad::OnRightDown, this);
 		m_tctrl->Bind(wxEVT_TEXT, &TextPad::OnTextChanged, this);
-	}
-
-	//m_contextMenu
-	{
-		m_contextMenu->Bind(wxEVT_UPDATE_UI, &TextPad::OnMenuUpdateUI, this);
 	}
 #pragma endregion
 
@@ -103,9 +92,82 @@ void TextPad::SetContentFontSize(int size) {
 NOTE_TYPE_e TextPad::GetType(void) {
 	return TEXT;
 }
+
 void TextPad::ReceiveTabNavigation(void) {
 	m_tctrl->SetFocus();
 	m_tctrl->SetInsertionPointEnd();
+}
+void TextPad::AddOwnContextMenu(wxWindow* parent, wxMenu* menu) {
+	auto owner = m_tctrl;
+
+	auto selectAll = menu->Append(wxID_SELECT_ALL, wxString::FromUTF8("Chọn toàn bộ nội dung \t Ctrl + A"));
+	auto eraseContent = menu->Append(wxID_ERASE_ALL, wxString::FromUTF8("Xóa nội dung"));
+	auto copy = menu->Append(wxID_COPY, wxString::FromUTF8("Sao chép \t Ctrl + C"));
+	auto paste = menu->Append(wxID_PASTE, wxString::FromUTF8("Dán \t Ctrl + V"));
+	auto cut = menu->Append(wxID_CUT, wxString::FromUTF8("Cắt \t Ctrl + X"));
+	auto undo = menu->Append(wxID_UNDO, wxString::FromUTF8("Hoàn tác\tCtrl + Z"));
+	auto redo = menu->Append(wxID_REDO, wxString::FromUTF8("Hủy hoàn tác\tCtrl + Y"));
+	wxAcceleratorEntry entries[1];
+	entries[0].Set(wxACCEL_CTRL, (int)'Y', redo->GetId());
+
+	wxAcceleratorTable table(1, entries);
+	owner->SetAcceleratorTable(table);
+
+	parent->Bind(wxEVT_MENU, [=](wxCommandEvent& evt) {
+		owner->Remove(0, owner->GetLastPosition());
+		CHILD_CHANGED;
+		}, eraseContent->GetId());
+	parent->Bind(wxEVT_MENU, [=](wxCommandEvent& evt) {
+		owner->SelectAll();
+		}, selectAll->GetId());
+	parent->Bind(wxEVT_MENU, [=](wxCommandEvent& evt) {
+		owner->Copy();
+		}, copy->GetId());
+	parent->Bind(wxEVT_MENU, [=](wxCommandEvent& evt) {
+		owner->Paste();
+		}, paste->GetId());
+	parent->Bind(wxEVT_MENU, [=](wxCommandEvent& evt) {
+		owner->Cut();
+		}, cut->GetId());
+	parent->Bind(wxEVT_MENU, [=](wxCommandEvent& evt) {
+		owner->Undo();
+		}, undo->GetId());
+	parent->Bind(wxEVT_MENU, [=](wxCommandEvent& evt) {
+		owner->Redo();
+		}, redo->GetId());
+}
+void TextPad::UpdateOwnContextMenu(wxMenu* menu) {
+	auto owner = m_tctrl;
+	auto copy = menu->FindItem(wxID_COPY);
+	{
+		if (copy) {
+			copy->Enable(owner->CanCopy());
+		}
+	}
+	auto cut = menu->FindItem(wxID_CUT);
+	{
+		if (cut) {
+			cut->Enable(owner->CanCut());
+		}
+	}
+	auto paste = menu->FindItem(wxID_PASTE);
+	{
+		if (paste) {
+			paste->Enable(owner->CanPaste());
+		}
+	}
+	auto undo = menu->FindItem(wxID_UNDO);
+	{
+		if (undo) {
+			undo->Enable(owner->CanUndo());
+		}
+	}
+	auto redo = menu->FindItem(wxID_REDO);
+	{
+		if (redo) {
+			redo->Enable(owner->CanRedo());
+		}
+	}
 }
 
 void TextPad::FromJson(wxString json) {
@@ -117,7 +179,7 @@ void TextPad::FromJson(wxString json) {
 }
 wxString TextPad::ToJson(void) {
 	wxString json;
-	json += "\"content\":[" + JSON_START_MARK + m_tctrl->GetValue() + JSON_END_MARK + "]";
+	json += "content:[" + JSON_START_MARK + m_tctrl->GetValue() + JSON_END_MARK + "]";
 	return json;
 }
 #pragma endregion
@@ -201,85 +263,15 @@ void TextPad::OnTextChanged(wxCommandEvent& evt) {
 	}
 	evt.Skip();
 }
-void TextPad::OnContextMenu(wxContextMenuEvent& evt) {
-	if (m_rightDown) {
-		//this->BuildContextMenu();
-		m_contextMenu->UpdateUI();
-		auto clientPos = evt.GetPosition() == wxDefaultPosition ?
-			(wxPoint(this->GetSize().GetWidth() / 2, this->GetSize().GetHeight() / 2))
-			: this->ScreenToClient(evt.GetPosition());
 
-		this->PopupMenu(m_contextMenu, clientPos);
-		m_rightDown = false;
-	}
-}
-void TextPad::OnRightDown(wxMouseEvent& evt) {
-	m_rightDown = true;
-	evt.Skip();
-}
-void TextPad::OnMenuUpdateUI(wxUpdateUIEvent& evt) {
-	auto owner = m_tctrl;
-	auto copy = m_contextMenu->FindItem(wxID_COPY);
-	{
-		if (copy) {
-			copy->Enable(owner->CanCopy());
-		}
-	}
-	auto cut = m_contextMenu->FindItem(wxID_CUT);
-	{
-		if (cut) {
-			cut->Enable(owner->CanCut());
-		}
-	}
-	auto paste = m_contextMenu->FindItem(wxID_PASTE);
-	{
-		if (paste) {
-			paste->Enable(owner->CanPaste());
-		}
-	}
-	auto undo = m_contextMenu->FindItem(wxID_UNDO);
-	{
-		if (undo) {
-			undo->Enable(owner->CanUndo());
-		}
-	}
-	auto redo = m_contextMenu->FindItem(wxID_REDO);
-	{
-		if (redo) {
-			redo->Enable(owner->CanRedo());
-		}
-	}
-	auto fixedWidth = m_contextMenu->FindItem(wxID_FIXED_WIDTH);
-	{
-		if (fixedWidth) {
-			if (m_isFixedWidth) {
-				fixedWidth->SetItemLabel(wxString::FromUTF8("Hủy cố định chiều rộng"));
-			}
-			else {
-				fixedWidth->SetItemLabel(wxString::FromUTF8("Cố định chiều rộng"));
-			}
-			fixedWidth->Check(m_isFixedWidth);
-		}
-	}
-	auto fixedHeight = m_contextMenu->FindItem(wxID_FIXED_HEIGHT);
-	{
-		if (fixedHeight) {
-			if (m_isFixedHeight) {
-				fixedHeight->SetItemLabel(wxString::FromUTF8("Hủy cố định chiều cao"));
-			}
-			else {
-				fixedHeight->SetItemLabel(wxString::FromUTF8("Cố định chiều cao"));
-			}
-			fixedHeight->Check(m_isFixedHeight);
-		}
-	}
-}
+
+
 
 #pragma endregion
 
 
 void TextPad::BuildContextMenu(void) {
-	auto owner = m_tctrl;
+	/*auto owner = m_tctrl;
 	m_contextMenu = new wxMenu();
 
 	auto selectAll = m_contextMenu->Append(wxID_SELECT_ALL, wxString::FromUTF8("Chọn toàn bộ nội dung \t Ctrl + A"));
@@ -289,21 +281,21 @@ void TextPad::BuildContextMenu(void) {
 	auto cut = m_contextMenu->Append(wxID_CUT, wxString::FromUTF8("Cắt \t Ctrl + X"));
 	auto undo = m_contextMenu->Append(wxID_UNDO, wxString::FromUTF8("Hoàn tác\tCtrl + Z"));
 	auto redo = m_contextMenu->Append(wxID_REDO, wxString::FromUTF8("Hủy hoàn tác\tCtrl + Y"));
-	m_contextMenu->AppendSeparator();
-	auto fitContent = m_contextMenu->Append(wxID_FIT_CONTENT, wxString::FromUTF8("Tùy chỉnh kích thước tự động"));
+	m_contextMenu->AppendSeparator();*/
+	/*auto fitContent = m_contextMenu->Append(wxID_FIT_CONTENT, wxString::FromUTF8("Tùy chỉnh kích thước tự động"));
 	auto fixedWidth = m_contextMenu->AppendCheckItem(wxID_FIXED_WIDTH, wxString::FromUTF8("Cố định chiều rộng"));
-	auto fixedHeight = m_contextMenu->AppendCheckItem(wxID_FIXED_HEIGHT, wxString::FromUTF8("Cố định chiều cao"));
+	auto fixedHeight = m_contextMenu->AppendCheckItem(wxID_FIXED_HEIGHT, wxString::FromUTF8("Cố định chiều cao"));*/
 
-	wxAcceleratorEntry entries[1];
+	/*wxAcceleratorEntry entries[1];
 	entries[0].Set(wxACCEL_CTRL, (int)'Y', redo->GetId());
 	
 	wxAcceleratorTable table(1, entries);
-	owner->SetAcceleratorTable(table);
+	owner->SetAcceleratorTable(table);*/
 
-	this->Bind(wxEVT_MENU, [this](wxCommandEvent& evt) {
+	/*this->Bind(wxEVT_MENU, [this](wxCommandEvent& evt) {
 		this->SetSizeToFitContent(true, true);
-		}, fitContent->GetId());
-	this->Bind(wxEVT_MENU, [=](wxCommandEvent& evt) {
+		}, fitContent->GetId());*/
+	/*this->Bind(wxEVT_MENU, [=](wxCommandEvent& evt) {
 		owner->Clear();
 		CHILD_CHANGED;
 		}, eraseContent->GetId());
@@ -324,43 +316,46 @@ void TextPad::BuildContextMenu(void) {
 		}, undo->GetId());
 	this->Bind(wxEVT_MENU, [=](wxCommandEvent& evt) {
 		owner->Redo();
-		}, redo->GetId());
-	this->Bind(wxEVT_MENU, [=](wxCommandEvent& evt) {
+		}, redo->GetId());*/
+	/*this->Bind(wxEVT_MENU, [=](wxCommandEvent& evt) {
 		m_isFixedWidth = !m_isFixedWidth;
 		this->SetFixedWidth(m_isFixedWidth);
 		}, fixedWidth->GetId());
 	this->Bind(wxEVT_MENU, [=](wxCommandEvent& evt) {
 		m_isFixedHeight = !m_isFixedHeight;
 		this->SetFixedHeight(m_isFixedHeight);
-		}, fixedHeight->GetId());
+		}, fixedHeight->GetId());*/
 }
 void TextPad::SetFixedWidth(bool isFixed) {
+	m_isFixedWidth = isFixed;
+	//do nothing, yet
 	return;
-	int scrollbarWidth = 15;
-	auto window = m_tctrl;
-	if (isFixed) {
-		//show the vertical scroll bar
-		m_tctrl->SetScrollbar(wxVERTICAL, 0, 20, 50);
-		
-		//increase the width after add the scrollbar
-		wxSize newSize = this->GetSize();
-		newSize.SetWidth(newSize.GetWidth() + scrollbarWidth);
-		this->PrepareToSendSizeRequest(newSize);
-	}
-	else {
+	//int scrollbarWidth = 15;
+	//auto window = m_tctrl;
+	//if (isFixed) {
+	//	//show the vertical scroll bar
+	//	m_tctrl->SetScrollbar(wxVERTICAL, 0, 20, 50);
+	//	
+	//	//increase the width after add the scrollbar
+	//	wxSize newSize = this->GetSize();
+	//	newSize.SetWidth(newSize.GetWidth() + scrollbarWidth);
+	//	this->PrepareToSendSizeRequest(newSize);
+	//}
+	//else {
 
-		//hide the vertical scroll bar
-		m_tctrl->SetScrollbar(wxVERTICAL, 0, 0, 0);
-		//expand the height to fit the content
-		this->SetSizeToFitContent(false, true);
+	//	//hide the vertical scroll bar
+	//	m_tctrl->SetScrollbar(wxVERTICAL, 0, 0, 0);
+	//	//expand the height to fit the content
+	//	this->SetSizeToFitContent(false, true);
 
-		//descrease the size when remove scrollbar
-		wxSize newSize = this->GetSize();
-		newSize.SetWidth(newSize.GetWidth() - scrollbarWidth);
-		this->PrepareToSendSizeRequest(newSize);
-	}
+	//	//descrease the size when remove scrollbar
+	//	wxSize newSize = this->GetSize();
+	//	newSize.SetWidth(newSize.GetWidth() - scrollbarWidth);
+	//	this->PrepareToSendSizeRequest(newSize);
+	//}
 }
 void TextPad::SetFixedHeight(bool isFixed) {
+	m_isFixedHeight = isFixed;
 	int scrollbarWidth = 15;
 	auto window = m_tctrl;
 	if (isFixed) {

@@ -31,6 +31,11 @@ extern void SetStatusText(wxString text, int index = 0);
 
 #define CHILD_CHANGED				(m_parent->OnChildChanged())
 
+
+const int wxID_FIT_CONTENT = wxNewId();
+const int wxID_FIXED_WIDTH = wxNewId();
+const int wxID_FIXED_HEIGHT = wxNewId();
+
 wxPoint NotePanel::s_delta = wxPoint(0, 0);
 wxPoint NotePanel::s_panelPos = wxPoint(0, 0);
 wxPoint NotePanel::s_rectPos = wxPoint(0, 0);
@@ -67,23 +72,33 @@ void NotePanel::Init(NoteHolderPanel* parent, NOTE_TYPE_e type) {
 	m_isMinimized = false;
 	m_rightDown = false;
 	m_dragPanel = new wxPanel(this, -1, wxDefaultPosition, wxSize(1, 1));
+	{
+		m_dragPanel->SetMinSize(DRAG_PANEL_MIN_SIZE);
+	}
 	m_headerTC = new wxTextCtrl(this, -1, wxString::FromUTF8("Tiêu đề"), wxDefaultPosition, 
 		wxSize(1, 1), wxTE_CENTER | wxBORDER_NONE);
+	{
+		m_headerTC->SetMinSize(HEADER_DEFAULT_MIN_SIZE);
+	}
 	CreateNotePad(type);
 	m_miniButton = new wxButton(this, -1, "", wxDefaultPosition, wxSize(1, 1), wxBORDER_NONE);
+	{
+		m_miniButton->SetBackgroundColour(m_dragPanel->GetBackgroundColour());
+		m_miniButton->SetMinSize(BUTTON_DEFAULT_MIN_SIZE);
+	}
 	m_closeButton = new wxButton(this, -1, "", wxDefaultPosition, wxSize(1, 1), wxBORDER_NONE);
+	{
+		m_closeButton->SetBackgroundColour(m_dragPanel->GetBackgroundColour());
+		m_closeButton->SetMinSize(BUTTON_DEFAULT_MIN_SIZE);
+	}
 
-	m_headerTC->SetMinSize(HEADER_DEFAULT_MIN_SIZE);
-	m_dragPanel->SetMinSize(DRAG_PANEL_MIN_SIZE);
+	
 	this->SetMinSize(NOTE_PANEL_MIN_SIZE);
 	this->SetHeaderFontSize(HEADER_DEFAULT_FONT_SIZE);
 	this->SetContentFontSize(CONTENT_DEFAULT_FONT_SIZE);
 	this->SetColor(PANEL_DEFAULT_COLOR);
 	this->SetDragPanelColor(DRAG_PANEL_DEFAULT_COLOR);
-	m_miniButton->SetBackgroundColour(m_dragPanel->GetBackgroundColour());
-	m_miniButton->SetMinSize(BUTTON_DEFAULT_MIN_SIZE);
-	m_closeButton->SetBackgroundColour(m_dragPanel->GetBackgroundColour());
-	m_closeButton->SetMinSize(BUTTON_DEFAULT_MIN_SIZE);
+	this->BuildContextMenu();
 #pragma endregion
 
 
@@ -141,6 +156,7 @@ void NotePanel::Init(NoteHolderPanel* parent, NOTE_TYPE_e type) {
 		this->Bind(wxEVT_LEFT_DOWN, &NotePanel::OnMouseLeftDown, this);
 		this->Bind(wxEVT_LEAVE_WINDOW, &NotePanel::OnMouseLeave, this);
 	}
+
 
 	//recursive
 	{
@@ -210,6 +226,9 @@ void NotePanel::ResetToDefaultSize(bool resetWidth, bool resetHeight) {
 wxRect& NotePanel::GetOriginRect(void){
 	return m_originRect;
 }
+NotePad* NotePanel::GetNotePad(void) {
+	return m_notepad;
+}
 wxString NotePanel::GetHeaderText(void){
 	return m_headerTC->GetValue();
 }
@@ -265,7 +284,7 @@ void NotePanel::OnChildChanged(void) {//propagates upward child changed event
 void NotePanel::FromJson(wxString json) {
 	//convention: [type, pos, size, header, content]
 	auto jsonList = SharedData::SplitByStartAndEnd(json, "[", "]");
-	if (jsonList.size() != 5) return;//invalid size
+	if (jsonList.size() != 6) return;//invalid size
 	//skip the type
 	
 	//position
@@ -293,14 +312,19 @@ void NotePanel::FromJson(wxString json) {
 			m_headerTC->SetValue(header);
 		}
 	}
+	//state
+	{
+		//SetStatusText(jsonList[4]);
+		this->SetNoteState(jsonList[4]);
+	}
+	
 	//content
 	{
-		auto content = jsonList[4];
+		auto content = jsonList[5];
 		m_notepad->FromJson(content);
 	}
 }
 wxString NotePanel::ToJson(void) {
-	//if(m_isMinimized == true) SetMinimize(false); // is minimizing, un minimize it before save
 	wxSize noteSize = m_originRect.GetSize();
 	if (m_isMinimized) {
 		//if the note is minimized, take the m_originSize as the note size
@@ -308,10 +332,11 @@ wxString NotePanel::ToJson(void) {
 	}
 	wxString retStr;
 	retStr += "{";
-	retStr += "\"type\":[" + NotePad::GetTypeString(m_notepad->GetType()) + "],";
-	retStr += "\"pos\":[" + PAIR(m_originRect.GetPosition()) + "],";
-	retStr += "\"size\":[" + PAIR(noteSize) + "],";
-	retStr += "\"header\":[@\"" + m_headerTC->GetValue() + "\"#],";
+	retStr += "type:[" + NotePad::GetTypeString(m_notepad->GetType()) + "],";
+	retStr += "pos:[" + PAIR(m_originRect.GetPosition()) + "],";
+	retStr += "size:[" + PAIR(noteSize) + "],";
+	retStr += "header:[@\"" + m_headerTC->GetValue() + "\"#],";
+	retStr += "state:[" + this->GetNoteState() + "],";
 	retStr += m_notepad->ToJson();
 	retStr += "},";
 	return retStr;
@@ -355,11 +380,8 @@ void NotePanel::SetMinimize(bool minimized) {
 void NotePanel::BindingEventRecursive(wxWindow* window) {
 	if (window == NULL) return;
 	window->Bind(wxEVT_SET_FOCUS, &NotePanel::OnFocus, this);
-	window->Bind(wxEVT_RIGHT_DOWN, [this](wxMouseEvent& evt) {
-		m_rightDown = true;
-		evt.Skip();
-	});
-	//window->GetEvtHandlerEnabled()
+	window->Bind(wxEVT_RIGHT_DOWN, &NotePanel::OnMouseRightDown, this);
+	window->Bind(wxEVT_CONTEXT_MENU, &NotePanel::OnContextMenu, this);
 	window->Bind(wxEVT_MOUSEWHEEL, &NotePanel::OnMouseScroll, this);
 
 	auto childs = window->GetChildren();
@@ -388,7 +410,58 @@ wxSize NotePanel::GetChildSizeDiff(void) {
 	//which turns out to be the drag panel + header + border size
 	return this->GetSize() - m_notepad->GetSize();
 }
+void NotePanel::SetNoteState(wxString state) {
+	/* state format :
+	* bit 0th: is minimized
+	* bit 1st: is fixed width
+	* bit 2nd: is fixed height
+	*/
+	auto stateList = SharedData::Split(state, "");
+	if (stateList.size() != 3) return;
+	auto charToState = [](wxString c) -> bool {
+		if (c == '1') return true;
+		return false;
+	};
+	this->SetMinimize(charToState(stateList[0]));
+	m_notepad->SetFixedWidth(charToState(stateList[1]));
+	m_notepad->SetFixedHeight(charToState(stateList[2]));
+}
+wxString NotePanel::GetNoteState(void) {
+	/* state format :
+	* bit 0th: is minimized
+	* bit 1st: is fixed width
+	* bit 2nd: is fixed height
+	*/
+	wxString retStr;
+	auto stateToChar = [this](bool state) ->wxChar {
+		if (state) return '1';
+		return '0';
+	};
+	retStr += stateToChar(m_isMinimized);
+	retStr += stateToChar(m_notepad->IsFixedWidth());
+	retStr += stateToChar(m_notepad->IsFixedHeight());
+	return retStr;
+}
+void NotePanel::BuildContextMenu(void) {
+	m_contextMenu = new wxMenu();
+	m_contextMenu->Bind(wxEVT_UPDATE_UI, &NotePanel::OnMenuUpdateUI, this);
 
+	auto fitContent = m_contextMenu->Append(wxID_FIT_CONTENT, wxString::FromUTF8("Tùy chỉnh kích thước tự động"));
+	auto fixedWidth = m_contextMenu->AppendCheckItem(wxID_FIXED_WIDTH, wxString::FromUTF8("Cố định chiều rộng"));
+	auto fixedHeight = m_contextMenu->AppendCheckItem(wxID_FIXED_HEIGHT, wxString::FromUTF8("Cố định chiều cao"));
+	m_contextMenu->AppendSeparator();
+	m_notepad->AddOwnContextMenu(this, m_contextMenu);
+
+	this->Bind(wxEVT_MENU, [this](wxCommandEvent& evt) {
+		m_notepad->SetSizeToFitContent();
+		}, fitContent->GetId());
+	this->Bind(wxEVT_MENU, [this](wxCommandEvent& evt) {
+		m_notepad->SetFixedWidth(!m_notepad->IsFixedWidth());
+		}, fixedWidth->GetId());
+	this->Bind(wxEVT_MENU, [this](wxCommandEvent& evt) {
+		m_notepad->SetFixedHeight(!m_notepad->IsFixedHeight());
+		}, fixedHeight->GetId());
+}
 #pragma region Events
 //dragging
 void NotePanel::OnDragPanelMouseMove(wxMouseEvent& evt){
@@ -534,6 +607,51 @@ void NotePanel::OnMouseLeftUp(wxMouseEvent& evt){
 		this->ReleaseMouse();
 	}
 	m_resizeDirection = NONE;
+}
+void NotePanel::OnContextMenu(wxContextMenuEvent& evt) {
+	if (m_rightDown) {
+		m_contextMenu->UpdateUI();
+		auto clientPos = evt.GetPosition() == wxDefaultPosition ?
+			(wxPoint(this->GetSize().GetWidth() / 2, this->GetSize().GetHeight() / 2))
+			: this->ScreenToClient(evt.GetPosition());
+
+		this->PopupMenu(m_contextMenu, clientPos);
+		m_rightDown = false;
+	}
+}
+void NotePanel::OnMouseRightDown(wxMouseEvent& evt) {
+	m_rightDown = true;
+	evt.Skip();
+}
+void NotePanel::OnMenuUpdateUI(wxUpdateUIEvent& evt) {
+	auto fixedWidth = m_contextMenu->FindItem(wxID_FIXED_WIDTH);
+	{
+		if (fixedWidth) {
+			bool isFixedWidth = m_notepad->IsFixedWidth();
+			if (isFixedWidth) {
+				fixedWidth->SetItemLabel(wxString::FromUTF8("Hủy cố định chiều rộng"));
+			}
+			else {
+				fixedWidth->SetItemLabel(wxString::FromUTF8("Cố định chiều rộng"));
+			}
+			fixedWidth->Check(isFixedWidth);
+		}
+	}
+	auto fixedHeight = m_contextMenu->FindItem(wxID_FIXED_HEIGHT);
+	{
+		if (fixedHeight) {
+			bool isFixedHeight = m_notepad->IsFixedHeight();
+			if (isFixedHeight) {
+				fixedHeight->SetItemLabel(wxString::FromUTF8("Hủy cố định chiều cao"));
+			}
+			else {
+				fixedHeight->SetItemLabel(wxString::FromUTF8("Cố định chiều cao"));
+			}
+			fixedHeight->Check(isFixedHeight);
+		}
+	}
+
+	m_notepad->UpdateOwnContextMenu(m_contextMenu);
 }
 
 

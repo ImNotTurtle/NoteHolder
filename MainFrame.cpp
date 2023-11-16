@@ -109,63 +109,15 @@ void MainFrame::ProgramStart(void) {
 		return;
 	}
 	auto dataList = SharedData::Split(fileContent, "\n");
-	try {
-		//first row is the latest working paths
-		if (SharedData::StartWith(dataList[0], "[") && SharedData::EndWith(dataList[0], "]")) {//srounded by []
-			dataList[0].Remove(0, 1); // remove [
-			dataList[0].RemoveLast(1); // remove ]
-			auto pathList = SharedData::Split(dataList[0], ",");
-			for (auto path : pathList) {
-				if (wxFile::Exists(path)) {//check if the file still exists
-					m_noteManager->CreateNotePanel();
-					m_noteManager->GetCurrentSelection()->ImportFromFile(path);
-				}
-			}
-		}
-		//second row is the last selected panel
-		try {
-			if (dataList[1] != "") {
-				int index = std::stoi(dataList[1].ToStdString());
-				index = SharedData::Clamp(index, -1, (int)m_noteManager->GetPanelList().size() - 1);
-				m_noteManager->SetSelection(index);
-			}
-			else {
-				m_noteManager->SetSelection(-1);
-			}
-		}
-		catch (...) {
-			m_noteManager->SetSelection(-1);
-		}
-	}
-	catch (std::out_of_range) {
+	//note manager takes the first 2 line
+	m_noteManager->FromJson(SharedData::Join(dataList, "\n", 0, 1));
+	
 
-	}
-	catch (...) {
-
-	}
 }
 void MainFrame::ProgramQuit(void) {
 	//let the manager decides to quit
 	if (m_noteManager->OnQuit()) {
-		//save all working path
-		wxString fileContent;
-		auto panelList = m_noteManager->GetPanelList();
-		wxString rowContent = "[";
-		for (int i = 0; i < panelList.size(); i++) {
-			if (wxFile::Exists(panelList[i]->GetFilePath())) {
-				if (i != panelList.size() - 1) {
-					rowContent += panelList[i]->GetFilePath() + ",";
-				}
-				else rowContent += panelList[i]->GetFilePath();
-			}
-		}
-		rowContent += "]";
-		fileContent += rowContent + "\n";
-
-		//save the last select panel
-		rowContent = std::to_string(m_noteManager->GetSelection());
-		fileContent += rowContent + "\n";
-
+		wxString fileContent = m_noteManager->ToJson();
 		SharedData::WriteFile(SAVED_DATA_PATH, fileContent);
 		this->Destroy();
 	}
