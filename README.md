@@ -15,5 +15,7 @@
   - Rèn luyện kĩ năng lập trình Object-Oriented và các khái niệm phức tạp xung quanh nó như kế thừa, đa hình, đóng gói.
   - Hiểu được một phần tư duy về dòng chảy của phần mềm.
 # Sau đây là một số hình ảnh của chương trình
+- Tổng quan giao diện của chương trinh
 ![image](https://github.com/user-attachments/assets/13e2e33c-1743-49cd-a02a-414225d02254)
+- Cửa sổ quản lý các ghi chú
 ![image](https://github.com/user-attachments/assets/1cd850cb-c182-496d-9e2f-4bd446d70ac5)
