@@ -19,3 +19,8 @@
 ![image](https://github.com/user-attachments/assets/13e2e33c-1743-49cd-a02a-414225d02254)
 - Cửa sổ quản lý các ghi chú
 ![image](https://github.com/user-attachments/assets/1cd850cb-c182-496d-9e2f-4bd446d70ac5)
+
+# Một số thông tin cụ thể thêm về chương trình
+- Ngôn ngữ: C++
+- Framework: wxWidgets v3.2.2.1
+- IDE: Microsoft Visual Studio 2022
