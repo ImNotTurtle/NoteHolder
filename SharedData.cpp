@@ -3,6 +3,9 @@
 extern void SetStatusText(wxString text, int index = 0);
 
 
+APP_STATE_e e_appState = APP_STATE_e::INIT;
+
+
 #pragma region NumberManipulations
 
 
@@ -62,6 +65,100 @@ wxVector<wxString> SharedData::Split(wxString str, wxString splitBy, int splitCo
     
     return retList;
 }
+
+wxVector<wxString> SharedData::SplitByStartAndEnd(wxString str, wxString startWith, wxString endWith) {
+    wxVector<wxString> retList;
+    //use start count and end count to make sure startString and endString should make a pair
+    int startIndex = 0, endIndex = 0;
+    int startCount = 0, endCount = 0;
+    wxString accumStr = "";// accum is string sum
+    wxString tempStr = "";// temp save string in case current character match with some character but not all in split string
+    wxString tempStr2 = "";//temp save end string
+    for (int i = 0; i < str.length(); i++) {
+        if (startCount == 0) {
+            if (str[i] == startWith[startIndex]) {
+                startIndex++;
+                tempStr += str[i];
+                if (startIndex == startWith.length()) {
+                    startIndex = 0;
+                    startCount++;
+                    tempStr = "";
+                    continue;
+                }
+            }
+            else {
+                startIndex = 0;
+                accumStr += tempStr;
+                tempStr = "";
+            }
+        }
+
+        if (startCount > 0) {
+            //keep counting if start string appears, just add start string to accum if start string appears
+            if (str[i] == startWith[startIndex]) {
+                startIndex++;
+                tempStr += str[i];
+                if (startIndex == startWith.length()) {
+                    startIndex = 0;
+                    startCount++;
+                    accumStr += tempStr;
+                    tempStr = "";
+                    continue;
+                }
+            }
+            else {
+                startIndex = 0;
+            }
+
+            //searching for end string
+            if (str[i] == endWith[endIndex]) {
+                endIndex++;
+                tempStr2 += str[i];
+                if (endIndex == endWith.length()) {
+                    endIndex = 0;
+                    endCount++;
+                    // add tempStr2 to accumstr if endCount < startCount (make the tempStr2 to appear)
+                    if (startCount > endCount) {
+                        accumStr += tempStr2;
+                    }
+                    tempStr2 = "";
+                }
+            }
+            else {//end string no matching
+                if (endIndex != 0) {//if end string has been match with some characters before 
+                    accumStr += tempStr2;
+                    tempStr2 = "";
+                }
+                else {
+                    accumStr += str[i];
+                }
+                endIndex = 0;
+            }
+        }
+
+        if (endCount == startCount && startCount > 0) {//find a string wrap by start and end string, add to the list
+            retList.push_back(accumStr);
+            accumStr = "";
+            tempStr = "";
+            tempStr2 = "";
+            startIndex = 0;
+            endIndex = 0;
+            startCount = 0;
+            endCount = 0;
+        }
+    }
+
+    if (accumStr != "") {
+        if (tempStr != "") {
+            accumStr += tempStr;
+        }
+        retList.push_back(accumStr);
+    }
+
+    return retList;
+}
+
+/*
 wxVector<wxString> SharedData::SplitByStartAndEnd(wxString str, wxString startWith, wxString endWith) {
     wxVector<wxString> retList;
 
@@ -97,7 +194,7 @@ wxVector<wxString> SharedData::SplitByStartAndEnd(wxString str, wxString startWi
                 }
             }
             else {//end string no matching
-                if (endIndex != 0) {//if end string has been match with some characters before 
+                if (endIndex != 0) {//if end string has been match with some characters before
                     accumStr += tempStr;
                     tempStr = "";
                 }
@@ -127,7 +224,7 @@ wxVector<wxString> SharedData::SplitByStartAndEnd(wxString str, wxString startWi
     }
 
     return retList;
-}
+}*/
 wxString SharedData::SplitAndTake(wxString str, wxString splitBy, int takeIndex, int splitCount) {
     auto list = SharedData::Split(str, splitBy, splitCount);
     if (list.size() == 0) return "";
@@ -140,6 +237,7 @@ wxString SharedData::SplitAndTake(wxString str, wxString splitBy, int takeIndex,
     return list[takeIndex];
 }
 bool SharedData::StartWith(wxString str, wxString startWith) {
+    if (str == "") return false;
     int i = 0;
     while (i < startWith.length() && startWith[i] == str[i]) {
         i++;
@@ -171,17 +269,26 @@ wxString SharedData::Join(wxVector<wxString> list, wxString joinBy, int startInd
 
 #pragma region FileManipulations
 wxString SharedData::ReadFile(wxString filePath){
-    wxFile file(filePath, wxFile::read);
-    if (!file.IsOpened()) return "";
-    wxString fileContent;
-    if (file.ReadAll(&fileContent)) {
-        return fileContent;
+    wxFile file;
+    if (wxFile::Exists(filePath)) {
+        file.Open(filePath, wxFile::read);
+        if (!file.IsOpened()) return "";
+        wxString fileContent;
+        if (file.ReadAll(&fileContent)) {
+            return fileContent;
+        }
     }
+    
     return "";
 }
 bool SharedData::WriteFile(wxString filePath, wxString fileContent) {
-    wxFile file(filePath, wxFile::write);
-    if (!file.IsOpened()) return false;
+    wxFile file;
+    if (wxFile::Exists(filePath)) {
+        file.Open(filePath, wxFile::write);
+    }
+    else {
+        file.Create(filePath, true);
+    }
     file.Write(fileContent);
     return true;
 }

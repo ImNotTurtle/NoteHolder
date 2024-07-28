@@ -13,9 +13,12 @@ extern void SetStatusText(wxString text, int index = 0);
 
 NoteManager::NoteManager(wxWindow* parent, int id, wxPoint pos, wxSize size) {
 	wxNotebook::Create(parent, id, pos, size);
+	BindInspector(nullptr);
 	BuildContextMenu();
+	this->Bind(wxEVT_SIZE, &NoteManager::OnResize, this);
 	this->Bind(wxEVT_CONTEXT_MENU, &NoteManager::OnContextMenu, this);
 	this->Bind(wxEVT_RIGHT_DOWN, &NoteManager::OnRightClick, this);
+	this->Bind(wxEVT_NOTEBOOK_PAGE_CHANGED, &NoteManager::OnSelectionChanged, this);
 }
 /**************************************************************************
 *							PRIVATE MEMBER								  *
@@ -31,7 +34,7 @@ void NoteManager::BuildContextMenu(void) {
 	auto closeLeft = m_contextMenu->Append(wxID_ANY, wxString::FromUTF8("Đóng các tab ở bên trái"));
 	auto closeRight = m_contextMenu->Append(wxID_ANY, wxString::FromUTF8("Đóng các tab ở bên phải"));
 	m_contextMenu->AppendSeparator();
-	auto openInBrower = m_contextMenu->Append(wxID_ANY, wxString::FromUTF8("Mở thư mục"));
+	auto openInBrower = m_contextMenu->Append(wxID_ANY, wxString::FromUTF8("Mở file này thư mục"));
 
 
 	//accelerator table
@@ -103,6 +106,10 @@ void NoteManager::BuildContextMenu(void) {
 }
 
 #pragma region Events
+void NoteManager::OnResize(wxSizeEvent& evt) {
+	this->Layout();
+	evt.Skip();
+}
 void NoteManager::OnRightClick(wxMouseEvent& evt) {
 	m_mousePos = evt.GetPosition();
 	evt.Skip();
@@ -111,8 +118,10 @@ void NoteManager::OnContextMenu(wxContextMenuEvent& evt) {
 	auto clientPos = evt.GetPosition() == wxDefaultPosition ?
 		(wxPoint(this->GetSize().GetWidth() / 2, this->GetSize().GetHeight() / 2))
 		: this->ScreenToClient(evt.GetPosition());
-
 	this->PopupMenu(m_contextMenu, clientPos);
+}
+void NoteManager::OnSelectionChanged(wxBookCtrlEvent& evt) {
+	this->RequestInspectorReset();
 }
 #pragma endregion
 /**************************************************************************
@@ -147,7 +156,24 @@ void NoteManager::DeleteNotePanel(int index) {
 	m_panelList.erase(m_panelList.begin() + index);
 }
 
+void NoteManager::BindInspector(NoteInspector* inspector) {
+	if (inspector == NULL) return;
+	m_inspector = inspector;
+}
+void NoteManager::RequestInspectorUpdate(void) {
+	if (m_inspector == NULL) return;
+	m_inspector->UpdateInspector();
+}
+void NoteManager::RequestInspectorReset(void) {
+	if (m_inspector == NULL) return;
+	m_inspector->ResetInspector();
+}
+
 NoteHolderPanel* NoteManager::GetCurrentSelection(void) {
+	if (m_panelList.size() == 0 || this->GetSelection() < 0 || this->GetSelection() >= m_panelList.size()) 
+		//invalid index
+		return NULL;
+
 	return m_panelList[this->GetSelection()];
 }
 NoteHolderPanel* NoteManager::GetNotePanelAt(int index) {
@@ -186,7 +212,9 @@ void NoteManager::FromJson(wxString json){
 			try {
 				int index = std::stoi(dataList[1].ToStdString());
 				index = SharedData::Clamp(index, -1, (int)this->GetPanelList().size() - 1);
-				this->SetSelection(index);
+				if (index != -1) {
+					this->SetSelection(index);
+				}
 			}
 			catch (...) {
 				this->SetSelection(-1);

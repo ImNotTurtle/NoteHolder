@@ -26,6 +26,7 @@ void NoteHolderPanel::Init(wxWindow* parent, wxString panelName) {
 	this->SetDoubleBuffered(true);
 	this->EnableScrolling(true, true);
 	this->SetScrollbars(40, 40, 100, 100);
+	this->SetScrollRate(1, 1); // normalize the view port position -> easily moving the view position
 
 #pragma region Init
 
@@ -47,8 +48,6 @@ void NoteHolderPanel::Init(wxWindow* parent, wxString panelName) {
 	this->Bind(wxEVT_CONTEXT_MENU, &NoteHolderPanel::OnContextMenuEvent, this);
 	this->Bind(wxEVT_RIGHT_DOWN, &NoteHolderPanel::OnPanelMouseRightDown, this);
 #pragma endregion
-
-	this->SetName("NoteHolderPanel");
 }
 /**************************************************************************
 *							PRIVATE MEMBER								  *
@@ -111,16 +110,11 @@ void NoteHolderPanel::OnPanelResize(wxSizeEvent& evt) {
 	evt.Skip();
 }
 void NoteHolderPanel::OnPanelScroll(wxMouseEvent& evt) {
-	
-	OnScroll(evt.GetWheelRotation(), evt.ControlDown(), evt.ShiftDown());
+	OnScroll(evt.GetWheelRotation(), evt.GetWheelDelta(), evt.ControlDown(), evt.ShiftDown());
 }
 void NoteHolderPanel::OnPanelMouseMove(wxMouseEvent& evt) {
 	auto panel = this;
 	wxPoint mousePos;
-	/*wxWindow* window = wxGetActiveWindow();
-	if (window) {
-		SetStatusText(window->GetName());
-	}*/
 	if (evt.LeftIsDown() && evt.Dragging() && panel->HasCapture()) {
 		//calc delta
 		wxPoint deltaPos = evt.GetPosition() - m_captureMousePos;
@@ -198,6 +192,7 @@ void NoteHolderPanel::CreateNote(NOTE_TYPE_e type){
 }
 void NoteHolderPanel::AddNote(NotePanel* note) {
 	m_noteList.push_back(note);
+	this->RequestInspectorReset();
 	this->Refresh();
 }
 void NoteHolderPanel::DeleteNote(NotePanel* note){
@@ -231,6 +226,12 @@ void NoteHolderPanel::SetFilePath(wxString filePath) {
 	//extract and take the file name to be the panel name
 	SetPanelName(SharedData::SplitAndTake(filePath, "\\", -1));//get the file name in path
 }
+void NoteHolderPanel::SetViewPosition(wxPoint pos) {
+	int scrollX = 0;
+	int scrollY = 0;
+	this->GetScrollPixelsPerUnit(&scrollX, &scrollY);
+	this->Scroll(pos.x * scrollX, pos.y * scrollY);
+}
 
 float NoteHolderPanel::GetZoomFactor(void){
 	return m_zoomFactor;
@@ -243,6 +244,13 @@ wxString NoteHolderPanel::GetPanelName(void) {
 }
 wxString NoteHolderPanel::GetFilePath(void) {
 	return m_filePath;
+}
+wxVector<wxString> NoteHolderPanel::GetNoteHeaderList(void) {
+	wxVector<wxString> retList;
+	for (auto note : m_noteList) {
+		retList.push_back(note->GetHeaderText());
+	}
+	return retList;
 }
 
 void NoteHolderPanel::UpdateNotePanel(void){
@@ -291,6 +299,18 @@ wxString NoteHolderPanel::ToJson(void){
 void NoteHolderPanel::OnChildChanged(void) {
 	SetFileSaveState(true);
 }
+void NoteHolderPanel::RequestInspectorUpdate(void) {
+	auto manager = GetManager();
+	if (manager != NULL) {
+		manager->RequestInspectorUpdate();
+	}
+}
+void NoteHolderPanel::RequestInspectorReset(void) {
+	auto manager = GetManager();
+	if (manager != NULL) {
+		manager->RequestInspectorReset();
+	}
+}
 void NoteHolderPanel::SetFileSaveState(bool needToSave) {
 	if (needToSave) {
 		if (!SharedData::EndWith(GetPanelName(), "*")) {// not end with *
@@ -308,17 +328,24 @@ bool NoteHolderPanel::NeedingASave(void) {
 		|| this->GetFilePath() == ""; // or no file path to save
 }
 
-void NoteHolderPanel::OnScroll(int wheelRotation, bool ctrlDown, bool shiftDown) {//public scroll for children to access
-	
+void NoteHolderPanel::OnScroll(int wheelRotation, int wheelDelta, bool ctrlDown, bool shiftDown) {
+	//public scroll for children to access
+
 	auto panel = this;
-	int scrollStep = 5;
+	float scrollStep = 20.0f;
 	int scrollRotation = wheelRotation < 0 ? 1 : -1;
+	int scrollDelta = wheelDelta < 120 ? 0 : 1;
+	int scrollUnitX = 0;
+	int scrollUnitY = 0;
+	this->GetScrollPixelsPerUnit(&scrollUnitX, &scrollUnitY);
 	if (!ctrlDown) {//not zooming
 		if (!shiftDown) {//vscroll
-			panel->Scroll(panel->GetViewStart() + wxPoint(0, 1) * scrollStep * scrollRotation);
+			panel->Scroll(panel->GetViewStart() + wxPoint(0, 1) *
+				scrollStep * scrollRotation * scrollUnitX);
 		}
 		else {//hscroll
-			panel->Scroll(panel->GetViewStart() + wxPoint(1, 0) * scrollStep * scrollRotation);
+			panel->Scroll(panel->GetViewStart() + wxPoint(1, 0) *
+				scrollStep * scrollRotation * scrollUnitY);
 		}
 		panel->Refresh();
 	}

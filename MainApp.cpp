@@ -4,24 +4,24 @@
 
 /*
  TODO: 
-	Move the TextPad context menu to the parent which is the note panel
-	Move set fixed width and height of the TextPad to the base class which will apply for all other notepad
-	Adjust the note holder panel scroll speed
 	
-	Add note control list
-
 	 
 */
 
 /*
 * Problems need to be optimized:
 
-
 */
 
+
+extern APP_STATE_e e_appState;
+
 bool MainApp::OnInit(void) {
+	e_appState = APP_STATE_e::INIT;
 	wxInitAllImageHandlers();
 	MainFrame* mainFrame = new MainFrame(nullptr, -1, "Note Holder", APP_POS, APP_SIZE);
 	mainFrame->Show();
+	e_appState = APP_STATE_e::IDLE;
+
 	return true;
 }

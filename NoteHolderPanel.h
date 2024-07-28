@@ -24,11 +24,14 @@ public:
 	void SetZoomFactor(float zoomFactor);
 	void SetPanelName(wxString name);
 	void SetFilePath(wxString filePath);
+	void SetViewPosition(wxPoint pos);
+	//void Set
 
 	float GetZoomFactor(void);
 	wxVector<NotePanel*> GetNoteList(void);
 	wxString GetPanelName(void);
 	wxString GetFilePath(void);
+	wxVector<wxString> GetNoteHeaderList(void);
 
 	void FromJson(wxString json);
 	wxString ToJson(void);
@@ -36,10 +39,12 @@ public:
 	bool ExportToFile(wxString filePath);
 
 	void OnChildChanged(void);//handle when child is moved
+	void RequestInspectorUpdate(void);
+	void RequestInspectorReset(void);
 	void SetFileSaveState(bool needToSave);//set the file status to need to save or not
 	bool NeedingASave(void);
 
-	void OnScroll(int wheelRotation, bool ctrlDown, bool shiftDown);
+	void OnScroll(int wheelRotation, int wheelDelta, bool ctrlDown, bool shiftDown);
 	void OnZoom(int scrollRotation, float zoomFactor = 0.0f);//passing zoomFactor = 0 to performs normal zoom, jump to that zoomFactor otherwise
 	
 	static void SetManager(NoteManager* manager);

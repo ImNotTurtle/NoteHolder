@@ -9,7 +9,7 @@
 #include "NoteHolderPanel.h"
 #include "SharedData.h"
 
-
+class NoteInspector;
 //a note book that contains all the note holder panels
 class NoteManager : public wxNotebook
 {
@@ -21,6 +21,10 @@ public:
 	
 	void DeleteSelection(void);
 	void DeleteNotePanel(int index);
+
+	void BindInspector(NoteInspector* inspector);
+	void RequestInspectorUpdate(void);
+	void RequestInspectorReset(void);
 	
 
 	NoteHolderPanel* GetCurrentSelection(void);
@@ -36,10 +40,15 @@ private:
 	std::vector<NoteHolderPanel*> m_panelList;
 	wxMenu* m_contextMenu;
 	wxPoint m_mousePos;//save mouse position to find tab index by hittest
+	NoteInspector* m_inspector;
 
 	void BuildContextMenu(void);
 
+	void OnResize(wxSizeEvent& evt);
 	void OnRightClick(wxMouseEvent& evt);
 	void OnContextMenu(wxContextMenuEvent& evt);
+	void OnSelectionChanged(wxBookCtrlEvent& evt);
 
 };
+
+#include "NoteInspector.h"

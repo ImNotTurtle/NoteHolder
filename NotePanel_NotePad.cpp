@@ -43,10 +43,10 @@ void NotePad::ReceiveTabNavigation(void) {
 
 }
 void NotePad::AddOwnContextMenu(wxWindow* parent, wxMenu* menu) {
-	SetStatusText("goes here");
+	
 }
 void NotePad::UpdateOwnContextMenu(wxMenu* menu) {
-	SetStatusText("goes here", 1);
+	
 }
 
 void NotePad::SetColor(wxColour color) {

@@ -16,11 +16,19 @@
 #define TO_SIZE(p)					(wxSize(p.x, p.y))
 #define TO_POINT(p)					(wxPoint(p.x, p.y))
 
+enum class APP_STATE_e {
+	INIT,
+	IDLE,
+	CLOSE
+};
+
+
 namespace SharedData {
 	//number manipulations
 	template<typename T> T Min(T a, T b);
 	template<typename T> T Max(T a, T b);
 	template<typename T> T Clamp(T value, T min, T max);
+	template<typename T> T Cycle(T value, T start, T end);
 
 	//string manipulations
 	wxVector<wxString> Split(wxString str, wxString splitBy, int splitCount = -1);
@@ -53,4 +61,9 @@ template<typename T>
 T SharedData::Clamp(T value, T min, T max) {
 	return Max(min, Min(value, max));
 }
-
+template<typename T>
+T SharedData::Cycle(T value, T start, T end) {
+	if (value < start) return end;
+	if (value > end) return start;
+	return value;
+}

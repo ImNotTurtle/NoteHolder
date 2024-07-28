@@ -42,6 +42,9 @@
     <ClInclude Include="NotePanel_NotePad.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="NoteInspector.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MainApp.cpp">
@@ -69,6 +72,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="NotePanel_NotePad.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="NoteInspector.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

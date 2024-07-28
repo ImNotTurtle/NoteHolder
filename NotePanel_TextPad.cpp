@@ -6,10 +6,8 @@
 //use this macro whenever you wish to change the data
 #define CHILD_CHANGED							(m_parent->OnChildChanged())
 
-
-
-
 extern void SetStatusText(wxString text, int index = 0);
+
 
 //menu id
 const int wxID_ERASE_ALL = wxNewId();
@@ -75,6 +73,7 @@ TextPad::TextPad(NotePanel* parent)
 	}
 #pragma endregion
 
+
 	this->EnableScrollbar(wxVERTICAL, false);
 }
 /**************************************************************************
@@ -88,6 +87,81 @@ void TextPad::SetColor(wxColour color) {
 void TextPad::SetContentFontSize(int size) {
 	m_tctrl->SetFont(wxFontInfo(size).Family(wxFONTFAMILY_DEFAULT));
 }
+void TextPad::SetFixedWidth(bool isFixed) {
+	m_isFixedWidth = isFixed;
+	//do nothing, yet
+	return;
+	//int scrollbarWidth = 15;
+	//auto window = m_tctrl;
+	//if (isFixed) {
+	//	//show the vertical scroll bar
+	//	m_tctrl->SetScrollbar(wxVERTICAL, 0, 20, 50);
+	//	
+	//	//increase the width after add the scrollbar
+	//	wxSize newSize = this->GetSize();
+	//	newSize.SetWidth(newSize.GetWidth() + scrollbarWidth);
+	//	this->PrepareToSendSizeRequest(newSize);
+	//}
+	//else {
+
+	//	//hide the vertical scroll bar
+	//	m_tctrl->SetScrollbar(wxVERTICAL, 0, 0, 0);
+	//	//expand the height to fit the content
+	//	this->SetSizeToFitContent(false, true);
+
+	//	//descrease the size when remove scrollbar
+	//	wxSize newSize = this->GetSize();
+	//	newSize.SetWidth(newSize.GetWidth() - scrollbarWidth);
+	//	this->PrepareToSendSizeRequest(newSize);
+	//}
+}
+void TextPad::SetFixedHeight(bool isFixed) {
+	m_isFixedHeight = isFixed;
+	int scrollbarWidth = 15;
+	auto window = m_tctrl;
+	if (isFixed) {
+		//show the vertical scroll bar
+		this->EnableScrollbar(wxVERTICAL);
+
+		//increase the width after add the scrollbar
+		wxSize newSize = this->GetSize();
+		newSize.SetWidth(newSize.GetWidth() + scrollbarWidth);
+		this->PrepareToSendSizeRequest(newSize);
+	}
+	else {
+		//hide the vertical scroll bar
+		this->EnableScrollbar(wxVERTICAL, false);
+
+		//descrease the size when remove scrollbar
+		wxSize newSize = this->GetSize();
+		newSize.SetWidth(newSize.GetWidth() - scrollbarWidth);
+		this->PrepareToSendSizeRequest(newSize);
+	}
+}
+void TextPad::SetFixedSize(bool fixedWidth, bool fixedHeight) {
+	this->SetFixedWidth(fixedWidth);
+	this->SetFixedHeight(fixedHeight);
+}
+void TextPad::SetSizeToFitContent(bool fitWidth, bool fitHeight) {
+	if (!fitWidth && !fitHeight) return; // nothing to change here
+	auto window = m_tctrl;
+	wxClientDC dc(window);
+	//find the text size and fit it
+	wxSize newSize = dc.GetMultiLineTextExtent(window->GetValue()); // the size request for the text
+	wxSize minSize = m_parent->GetMinSize();
+	//add some padding
+	newSize.x += window->GetCharWidth() * 3;
+	newSize.y += window->GetCharHeight();
+
+	if (!fitWidth) {//keep the width un-change
+		newSize.SetWidth(window->GetSize().GetWidth());
+	}
+	if (!fitHeight) {//keep the height un-change
+		newSize.SetHeight(window->GetSize().GetHeight());
+	}
+	this->PrepareToSendSizeRequest(newSize);
+	CHILD_CHANGED;
+}
 
 NOTE_TYPE_e TextPad::GetType(void) {
 	return TEXT;
@@ -100,6 +174,7 @@ void TextPad::ReceiveTabNavigation(void) {
 void TextPad::AddOwnContextMenu(wxWindow* parent, wxMenu* menu) {
 	auto owner = m_tctrl;
 
+	menu->AppendSeparator();
 	auto selectAll = menu->Append(wxID_SELECT_ALL, wxString::FromUTF8("Chọn toàn bộ nội dung \t Ctrl + A"));
 	auto eraseContent = menu->Append(wxID_ERASE_ALL, wxString::FromUTF8("Xóa nội dung"));
 	auto copy = menu->Append(wxID_COPY, wxString::FromUTF8("Sao chép \t Ctrl + C"));
@@ -247,142 +322,28 @@ void TextPad::OnTextPaste(wxClipboardTextEvent& evt) {//add row when user paste 
 	evt.Skip();
 }
 void TextPad::OnTextChanged(wxCommandEvent& evt) {
-	//adjust the width as the user typing too long text
-	if (m_isFixedWidth) return; // not possible to expand on width
+	//adjust the width as the user typing too long text and mark the note holder file as changed
 	auto window = m_tctrl;
 	if (window) {
-		int charWidth = window->GetCharWidth() * 2; //idk but * 2 works just fine
-		int maxWidth = GetLineMaxWidth(window, window->GetValue());
+		if (!m_isFixedWidth) {// is possible to expand on width
+			int charWidth = window->GetCharWidth() * 2; //idk but * 2 works just fine
+			int maxWidth = GetLineMaxWidth(window, window->GetValue());
 
-		if ((maxWidth + charWidth) >= window->GetSize().x) {//overflow on width
-			wxSize newSize = window->GetSize();
-			newSize.x += charWidth * 2.0f;
-			this->PrepareToSendSizeRequest(newSize);
+			if ((maxWidth + charWidth) >= window->GetSize().x) {//overflow on width
+				wxSize newSize = window->GetSize();
+				newSize.x += charWidth * 2.0f;
+				this->PrepareToSendSizeRequest(newSize);
+			}
 		}
+		
 		CHILD_CHANGED;
 	}
 	evt.Skip();
 }
-
-
-
-
 #pragma endregion
 
 
-void TextPad::BuildContextMenu(void) {
-	/*auto owner = m_tctrl;
-	m_contextMenu = new wxMenu();
 
-	auto selectAll = m_contextMenu->Append(wxID_SELECT_ALL, wxString::FromUTF8("Chọn toàn bộ nội dung \t Ctrl + A"));
-	auto eraseContent = m_contextMenu->Append(wxID_ERASE_ALL, wxString::FromUTF8("Xóa nội dung"));
-	auto copy = m_contextMenu->Append(wxID_COPY, wxString::FromUTF8("Sao chép \t Ctrl + C"));
-	auto paste = m_contextMenu->Append(wxID_PASTE, wxString::FromUTF8("Dán \t Ctrl + V"));
-	auto cut = m_contextMenu->Append(wxID_CUT, wxString::FromUTF8("Cắt \t Ctrl + X"));
-	auto undo = m_contextMenu->Append(wxID_UNDO, wxString::FromUTF8("Hoàn tác\tCtrl + Z"));
-	auto redo = m_contextMenu->Append(wxID_REDO, wxString::FromUTF8("Hủy hoàn tác\tCtrl + Y"));
-	m_contextMenu->AppendSeparator();*/
-	/*auto fitContent = m_contextMenu->Append(wxID_FIT_CONTENT, wxString::FromUTF8("Tùy chỉnh kích thước tự động"));
-	auto fixedWidth = m_contextMenu->AppendCheckItem(wxID_FIXED_WIDTH, wxString::FromUTF8("Cố định chiều rộng"));
-	auto fixedHeight = m_contextMenu->AppendCheckItem(wxID_FIXED_HEIGHT, wxString::FromUTF8("Cố định chiều cao"));*/
-
-	/*wxAcceleratorEntry entries[1];
-	entries[0].Set(wxACCEL_CTRL, (int)'Y', redo->GetId());
-	
-	wxAcceleratorTable table(1, entries);
-	owner->SetAcceleratorTable(table);*/
-
-	/*this->Bind(wxEVT_MENU, [this](wxCommandEvent& evt) {
-		this->SetSizeToFitContent(true, true);
-		}, fitContent->GetId());*/
-	/*this->Bind(wxEVT_MENU, [=](wxCommandEvent& evt) {
-		owner->Clear();
-		CHILD_CHANGED;
-		}, eraseContent->GetId());
-	this->Bind(wxEVT_MENU, [=](wxCommandEvent& evt) {
-		owner->SelectAll();
-		}, selectAll->GetId());
-	this->Bind(wxEVT_MENU, [=](wxCommandEvent& evt) {
-		owner->Copy();
-		}, copy->GetId());
-	this->Bind(wxEVT_MENU, [=](wxCommandEvent& evt) {
-		owner->Paste();
-		}, paste->GetId());
-	this->Bind(wxEVT_MENU, [=](wxCommandEvent& evt) {
-		owner->Cut();
-		}, cut->GetId());
-	this->Bind(wxEVT_MENU, [=](wxCommandEvent& evt) {
-		owner->Undo();
-		}, undo->GetId());
-	this->Bind(wxEVT_MENU, [=](wxCommandEvent& evt) {
-		owner->Redo();
-		}, redo->GetId());*/
-	/*this->Bind(wxEVT_MENU, [=](wxCommandEvent& evt) {
-		m_isFixedWidth = !m_isFixedWidth;
-		this->SetFixedWidth(m_isFixedWidth);
-		}, fixedWidth->GetId());
-	this->Bind(wxEVT_MENU, [=](wxCommandEvent& evt) {
-		m_isFixedHeight = !m_isFixedHeight;
-		this->SetFixedHeight(m_isFixedHeight);
-		}, fixedHeight->GetId());*/
-}
-void TextPad::SetFixedWidth(bool isFixed) {
-	m_isFixedWidth = isFixed;
-	//do nothing, yet
-	return;
-	//int scrollbarWidth = 15;
-	//auto window = m_tctrl;
-	//if (isFixed) {
-	//	//show the vertical scroll bar
-	//	m_tctrl->SetScrollbar(wxVERTICAL, 0, 20, 50);
-	//	
-	//	//increase the width after add the scrollbar
-	//	wxSize newSize = this->GetSize();
-	//	newSize.SetWidth(newSize.GetWidth() + scrollbarWidth);
-	//	this->PrepareToSendSizeRequest(newSize);
-	//}
-	//else {
-
-	//	//hide the vertical scroll bar
-	//	m_tctrl->SetScrollbar(wxVERTICAL, 0, 0, 0);
-	//	//expand the height to fit the content
-	//	this->SetSizeToFitContent(false, true);
-
-	//	//descrease the size when remove scrollbar
-	//	wxSize newSize = this->GetSize();
-	//	newSize.SetWidth(newSize.GetWidth() - scrollbarWidth);
-	//	this->PrepareToSendSizeRequest(newSize);
-	//}
-}
-void TextPad::SetFixedHeight(bool isFixed) {
-	m_isFixedHeight = isFixed;
-	int scrollbarWidth = 15;
-	auto window = m_tctrl;
-	if (isFixed) {
-		//show the vertical scroll bar
-		this->EnableScrollbar(wxVERTICAL);
-
-		//increase the width after add the scrollbar
-		wxSize newSize = this->GetSize();
-		newSize.SetWidth(newSize.GetWidth() + scrollbarWidth);
-		this->PrepareToSendSizeRequest(newSize);
-	}
-	else {
-		//hide the vertical scroll bar
-		this->EnableScrollbar(wxVERTICAL, false);
-		//expand the height to fit the content
-		this->SetSizeToFitContent(false, true);
-
-		//descrease the size when remove scrollbar
-		wxSize newSize = this->GetSize();
-		newSize.SetWidth(newSize.GetWidth() - scrollbarWidth);
-		this->PrepareToSendSizeRequest(newSize);
-	}
-}
-void TextPad::SetFixedSize(bool fixedWidth, bool fixedHeight) {
-	this->SetFixedWidth(fixedWidth);
-	this->SetFixedHeight(fixedHeight);
-}
 void TextPad::EnableScrollbar(int direction, bool enable) {
 	auto window = m_tctrl;
 	if (enable) {
@@ -396,26 +357,6 @@ void TextPad::PrepareToSendSizeRequest(wxSize newSize) {
 	//this class is not allow to change their size directly
 	//when the control wish to change the size, call this function to report to the parent
 	m_parent->OnChildSizeReport(newSize);
-}
-void TextPad::SetSizeToFitContent(bool fitWidth, bool fitHeight) {
-	if (!fitWidth && !fitHeight) return; // nothing to change here
-	auto window = m_tctrl;
-	wxClientDC dc(window);
-	//find the text size and fit it
-	wxSize newSize = dc.GetMultiLineTextExtent(window->GetValue()); // the size request for the text
-	wxSize minSize = m_parent->GetMinSize();
-	//add some padding
-	newSize.x += window->GetCharWidth() * 3;
-	newSize.y += window->GetCharHeight();
-
-	if (!fitWidth) {//keep the width un-change
-		newSize.SetWidth(window->GetSize().GetWidth());
-	}
-	if (!fitHeight) {//keep the height un-change
-		newSize.SetHeight(window->GetSize().GetHeight());
-	}
-	this->PrepareToSendSizeRequest(newSize);
-	CHILD_CHANGED;
 }
 #pragma endregion
 /**************************************************************************
