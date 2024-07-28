@@ -24,3 +24,5 @@
 - Ngôn ngữ: C++
 - Framework: wxWidgets v3.2.2.1
 - IDE: Microsoft Visual Studio 2022
+# Làm sao để sử dụng chương trình này
+Bạn có thể tải nó tại đây: [https://drive.google.com/file/d/1-VGdO8d2hrNqTPNANwvTgUh8Apn_bQEh/view?usp=sharing](https://drive.google.com/file/d/1-VGdO8d2hrNqTPNANwvTgUh8Apn_bQEh/view?usp=sharing)
