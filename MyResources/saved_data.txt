@@ -1,2 +1,2 @@
-[D:\Projects\C++\NoteHolder\MyResources\Logs\discord.txt,D:\Projects\C++\NoteHolder\MyResources\Logs\abc.txt,]
-0
+[D:\Projects\C++\NoteHolder\MyResources\Logs\discord.txt,D:\Projects\C++\NoteHolder\MyResources\Logs\abc.txt,D:\Funix\IOT305 - Do an tot nghiep\Tài liệu\notes_NH.txt,]
+2

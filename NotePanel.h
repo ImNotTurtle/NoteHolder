@@ -39,6 +39,7 @@ public:
 	void SetContentText(wxString text);
 	void SetMinimize(bool minimized);
 	void ResetToDefaultSize(bool resetWidth, bool resetHeight);
+	void RequestFocus(void);//send request to parent to move the view position so that the user can see the note
 
 	wxRect& GetOriginRect(void);
 	NotePad* GetNotePad(void);
@@ -51,6 +52,8 @@ public:
 	//child events
 	void OnChildSizeReport(wxSize childSize);
 	void OnChildChanged(void);
+
+	void OnClose(void);
 
 	void FromJson(wxString json);
 	wxString ToJson(void);

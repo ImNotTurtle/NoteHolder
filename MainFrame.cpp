@@ -1,5 +1,8 @@
 #include "MainFrame.h"
 
+extern APP_STATE_e e_appState;
+
+
 #define STRING(s)					(std::to_string(s))
 #define POINT(p)					(std::to_string(p.x) + "," + std::to_string(p.y))
 #define MIN_ZOOM					0.4f
@@ -7,10 +10,6 @@
 
 /*
 TODO:
- fixed note width option in menu context (expand on height)
- fixed note height (expand on width)
- fixed note size (add both scrollbar to both direction)
- do not un-minimize notes when save
 */
 
 MainFrame* MainFrame::instance = NULL;
@@ -28,7 +27,32 @@ MainFrame::MainFrame(wxWindow* parent, int id, const wxString& title, wxPoint po
 
 	#pragma region Init
 	wxPanel* framePanel = new wxPanel(this);
-	m_noteManager = new NoteManager(framePanel, -1, wxDefaultPosition, wxSize(1, 1));
+	m_toolbar = new wxPanel(framePanel, -1, wxDefaultPosition, wxSize(1, 30));
+	{
+		
+	}
+	m_splitWindow = new wxSplitterWindow(framePanel, -1, wxDefaultPosition, 
+		wxDefaultSize, wxSP_THIN_SASH | wxSP_LIVE_UPDATE);
+
+	m_noteManager = new NoteManager(m_splitWindow, -1, wxDefaultPosition, wxSize(1, 1));
+	m_toggleInspectorButton = new wxButton(m_toolbar, -1, "", wxDefaultPosition, wxSize(30, 30));
+	m_inspector = new NoteInspector(m_splitWindow, m_noteManager, m_toggleInspectorButton);
+	{
+		m_inspector->SetInspectorLabels("<", ">");
+	}
+
+	//m_splitWindow
+	{
+		m_splitWindow->SplitVertically(m_noteManager, m_inspector);
+		m_splitWindow->SetMinimumPaneSize(50);
+		m_splitWindow->SetSashGravity(1.0f);
+	}
+
+	//m_noteManager
+	{
+		m_noteManager->BindInspector(m_inspector);
+	}
+	
 	m_timer = new wxTimer(this);
 
 	#pragma region SystemComponents
@@ -75,25 +99,38 @@ MainFrame::MainFrame(wxWindow* parent, int id, const wxString& title, wxPoint po
 
 
 	#pragma region Layout
-	wxBoxSizer* frameSizerH = new wxBoxSizer(wxHORIZONTAL);
-	frameSizerH->Add(m_noteManager, 1, wxEXPAND);
-	framePanel->SetSizer(frameSizerH);
+	wxBoxSizer* frameSizer = new wxBoxSizer(wxVERTICAL);
+	frameSizer->Add(m_toolbar, 0, wxEXPAND);
+	frameSizer->Add(m_splitWindow, 1, wxEXPAND);
+	framePanel->SetSizer(frameSizer);
+
+	//m_toolbar
+	{
+		wxBoxSizer* toolbarSizer = new wxBoxSizer(wxHORIZONTAL);
+		toolbarSizer->AddStretchSpacer(1);
+		toolbarSizer->Add(m_toggleInspectorButton, wxSizerFlags(0).Center());
+		m_toolbar->SetSizer(toolbarSizer);
+	}
 	#pragma endregion
 
 
 	#pragma region BindingEvents
 	this->Bind(wxEVT_TIMER, &MainFrame::OnTimer, this);
 	this->Bind(wxEVT_CLOSE_WINDOW, &MainFrame::OnClose, this);
+	this->Bind(wxEVT_SIZE, &MainFrame::OnResize, this);
 	#pragma endregion
 
 
 	this->SetStatusBar(statusBar);
 	this->SetMenuBar(menubar);
 	this->SetAcceleratorTable(accel);
-	wxIcon icon(APP_ICON_PATH, wxBITMAP_TYPE_ICO);
-	if (icon.IsOk()) {
-		this->SetIcons(icon);
+	if(wxFile::Exists(APP_ICON_PATH)) {
+		wxIcon icon(APP_ICON_PATH, wxBITMAP_TYPE_ICO);
+		if (icon.IsOk()) {
+			this->SetIcons(icon);
+		}
 	}
+	
 
 	ProgramStart();
 }
@@ -111,8 +148,6 @@ void MainFrame::ProgramStart(void) {
 	auto dataList = SharedData::Split(fileContent, "\n");
 	//note manager takes the first 2 line
 	m_noteManager->FromJson(SharedData::Join(dataList, "\n", 0, 1));
-	
-
 }
 void MainFrame::ProgramQuit(void) {
 	//let the manager decides to quit
@@ -127,8 +162,14 @@ void MainFrame::OnTimer(wxTimerEvent& evt) {
 
 }
 void MainFrame::OnClose(wxCloseEvent& evt) {
+	e_appState = APP_STATE_e::CLOSE;
 	ProgramQuit();
 }
+void MainFrame::OnResize(wxSizeEvent& evt) {
+	auto window = m_splitWindow;
+	evt.Skip();
+}
+
 
 #pragma region MenuEvents
 void MainFrame::OnNew(wxCommandEvent& evt){
@@ -206,6 +247,9 @@ int MainFrame::SaveFile(bool saveAs, bool askForSave, int index) {
 		else {
 			SetStatusText(wxString::FromUTF8("Lưu file thất bại."), statusIndex);
 		}
+		if (saveAs) {//open that save as file
+			this->OpenFile(false, savePath);
+		}
 	}
 	//erase status after 5 seconds
 	{
@@ -217,25 +261,33 @@ int MainFrame::SaveFile(bool saveAs, bool askForSave, int index) {
 	}
 	return wxYES;
 }
-void MainFrame::OpenFile(void) {
-	wxFileDialog* open = new wxFileDialog(this, wxString::FromUTF8("Chọn file để mở"), APP_CWD, "", "*.txt", wxFD_OPEN | wxFD_FILE_MUST_EXIST);
-	if (open->ShowModal() == wxID_OK) {
+void MainFrame::OpenFile(bool popupDialog, wxString filePath) {
+	//modify the filepath parameter when the user need to choose the file location to open
+	if (popupDialog) {
+		wxFileDialog* open = new wxFileDialog(this, wxString::FromUTF8("Chọn file để mở"), APP_CWD, "", "*.txt", wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+		if (open->ShowModal() == wxID_OK) {
+			filePath = open->GetPath();
+		}
+		open->Destroy();
+	}
+	
+	//open the file at filepath location
+	{
 		//check if the path selected is opening now
-		bool createNote = true;
+		bool noteOpening = false;
 		auto panelList = m_noteManager->GetPanelList();
 		for (int i = 0; i < panelList.size(); i++) {
-			if (panelList[i]->GetFilePath() == open->GetPath()) {//the file is opening, set that panel to be select
+			if (panelList[i]->GetFilePath() == filePath) {//the file is opening, set that panel to be select
 				m_noteManager->SetSelection(i);
-				createNote = false;
+				noteOpening = true;
 				break;
 			}
 		}
-		if (createNote) {
+		if (!noteOpening) { // if the file is not openning then open that file
 			m_noteManager->CreateNotePanel();
-			m_noteManager->GetCurrentSelection()->ImportFromFile(open->GetPath());
+			m_noteManager->GetCurrentSelection()->ImportFromFile(filePath);
 		}
 	}
-	open->Destroy();
 }
 /**************************************************************************
 *							STATIC MEMBER								  *

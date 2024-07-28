@@ -136,6 +136,7 @@
     <ClInclude Include="MainApp.h" />
     <ClInclude Include="MainFrame.h" />
     <ClInclude Include="NoteHolderPanel.h" />
+    <ClInclude Include="NoteInspector.h" />
     <ClInclude Include="NoteManager.h" />
     <ClInclude Include="NotePanel.h" />
     <ClInclude Include="NotePanel_ListPad.h" />
@@ -147,6 +148,7 @@
     <ClCompile Include="MainApp.cpp" />
     <ClCompile Include="MainFrame.cpp" />
     <ClCompile Include="NoteHolderPanel.cpp" />
+    <ClCompile Include="NoteInspector.cpp" />
     <ClCompile Include="NoteManager.cpp" />
     <ClCompile Include="NotePanel.cpp" />
     <ClCompile Include="NotePanel_ListPad.cpp" />

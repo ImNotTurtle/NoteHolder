@@ -30,6 +30,9 @@ extern void SetStatusText(wxString text, int index = 0);
 #define BUTTON_DEFAULT_MIN_SIZE		(wxSize(18, 18))
 
 #define CHILD_CHANGED				(m_parent->OnChildChanged())
+#define INSPECTOR_UPDATE			(m_parent->RequestInspectorUpdate())
+#define INSPECTOR_RESET				(m_parent->RequestInspectorReset())
+//#define INSPECTOR_DELETE_REQUEST	(m_parent->)
 
 
 const int wxID_FIT_CONTENT = wxNewId();
@@ -125,7 +128,6 @@ void NotePanel::Init(NoteHolderPanel* parent, NOTE_TYPE_e type) {
 		m_dragPanel->Bind(wxEVT_LEFT_UP, &NotePanel::OnDragPanelMouseLeftUp, this);
 		m_dragPanel->Bind(wxEVT_LEAVE_WINDOW, &NotePanel::OnDragPanelMouseLeave, this);
 	}
-
 	//m_miniButton
 	{
 		m_miniButton->Bind(wxEVT_ENTER_WINDOW, &NotePanel::OnMinimizeButtonMouseEnter, this);
@@ -133,7 +135,6 @@ void NotePanel::Init(NoteHolderPanel* parent, NOTE_TYPE_e type) {
 		m_miniButton->Bind(wxEVT_LEFT_DOWN, &NotePanel::OnMinimizeButtonMouseLeftDown, this);
 		m_miniButton->Bind(wxEVT_PAINT, &NotePanel::OnMinimizeButtonPaint, this);
 	}
-	
 	//m_closeButton
 	{
 		m_closeButton->Bind(wxEVT_ENTER_WINDOW, &NotePanel::OnCloseButtonMouseEnter, this);
@@ -141,13 +142,11 @@ void NotePanel::Init(NoteHolderPanel* parent, NOTE_TYPE_e type) {
 		m_closeButton->Bind(wxEVT_LEFT_DOWN, &NotePanel::OnCloseButtonMouseLeftDown, this);
 		m_closeButton->Bind(wxEVT_PAINT, &NotePanel::OnCloseButtonPaint, this);
 	}
-	
 	//m_headerTC
 	{
 		m_headerTC->Bind(wxEVT_TEXT, &NotePanel::OnHeaderTextChanged, this);
 		m_headerTC->Bind(wxEVT_CHAR_HOOK, &NotePanel::OnHeaderCharHook, this);
 	}
-
 	//this
 	{
 		this->Bind(wxEVT_SIZE, &NotePanel::OnResize, this);
@@ -156,8 +155,6 @@ void NotePanel::Init(NoteHolderPanel* parent, NOTE_TYPE_e type) {
 		this->Bind(wxEVT_LEFT_DOWN, &NotePanel::OnMouseLeftDown, this);
 		this->Bind(wxEVT_LEAVE_WINDOW, &NotePanel::OnMouseLeave, this);
 	}
-
-
 	//recursive
 	{
 		BindingEventRecursive(this);
@@ -170,8 +167,11 @@ void NotePanel::Init(NoteHolderPanel* parent, NOTE_TYPE_e type) {
 *							PUBLIC MEMBER								  *
 **************************************************************************/
 #pragma region Public member
-bool NotePanel::operator == (NotePanel* other) {//same note if they have the same origin rect and same header (in case rect overlapping)
-	return this->GetOriginRect() == other->GetOriginRect() && this->GetHeaderText() == other->GetHeaderText();
+bool NotePanel::operator == (NotePanel* other) {
+	//two notes are considered as the same note if they have the
+	//same origin rect and same header (just in case the rects are overlapping)
+	return this->GetOriginRect() == other->GetOriginRect() 
+		&& this->GetHeaderText() == other->GetHeaderText();
 }
 bool NotePanel::operator != (NotePanel* other) {
 	return !(*this == other);
@@ -235,6 +235,10 @@ wxString NotePanel::GetHeaderText(void){
 wxString NotePanel::GetContentText(void){
 	return m_notepad->ToJson();
 }
+void NotePanel::RequestFocus(void) {
+	wxPoint pos = m_parent->CalcUnscrolledPosition(this->GetPosition());
+	m_parent->SetViewPosition(pos);
+}
 
 void NotePanel::UpdateSize(void) {
 	//set the panel size to match with the origin rect size and zoom factor
@@ -281,6 +285,15 @@ void NotePanel::OnChildChanged(void) {//propagates upward child changed event
 	CHILD_CHANGED;
 }
 
+void NotePanel::OnClose(void) {
+	CHILD_CHANGED;
+	//delete from the control before update the inspector
+	m_parent->DeleteNote(this);
+	this->Destroy();
+	//reset after destroy to make sure it will not appears in the inspector
+	INSPECTOR_RESET;
+}
+
 void NotePanel::FromJson(wxString json) {
 	//convention: [type, pos, size, header, content]
 	auto jsonList = SharedData::SplitByStartAndEnd(json, "[", "]");
@@ -302,7 +315,6 @@ void NotePanel::FromJson(wxString json) {
 
 		}
 	}
-	this->UpdateOnZoom();//update after receive position and size
 	//header
 	{
 		auto header = jsonList[3];
@@ -314,7 +326,6 @@ void NotePanel::FromJson(wxString json) {
 	}
 	//state
 	{
-		//SetStatusText(jsonList[4]);
 		this->SetNoteState(jsonList[4]);
 	}
 	
@@ -323,6 +334,7 @@ void NotePanel::FromJson(wxString json) {
 		auto content = jsonList[5];
 		m_notepad->FromJson(content);
 	}
+	this->UpdateOnZoom();//update after receive position and size
 }
 wxString NotePanel::ToJson(void) {
 	wxSize noteSize = m_originRect.GetSize();
@@ -449,7 +461,7 @@ void NotePanel::BuildContextMenu(void) {
 	auto fitContent = m_contextMenu->Append(wxID_FIT_CONTENT, wxString::FromUTF8("Tùy chỉnh kích thước tự động"));
 	auto fixedWidth = m_contextMenu->AppendCheckItem(wxID_FIXED_WIDTH, wxString::FromUTF8("Cố định chiều rộng"));
 	auto fixedHeight = m_contextMenu->AppendCheckItem(wxID_FIXED_HEIGHT, wxString::FromUTF8("Cố định chiều cao"));
-	m_contextMenu->AppendSeparator();
+	//m_contextMenu->AppendSeparator();
 	m_notepad->AddOwnContextMenu(this, m_contextMenu);
 
 	this->Bind(wxEVT_MENU, [this](wxCommandEvent& evt) {
@@ -508,6 +520,7 @@ void NotePanel::OnHeaderTextChanged(wxCommandEvent& evt) {//adjust width when us
 			this->UpdateSize();
 		}
 		CHILD_CHANGED;
+		INSPECTOR_UPDATE;
 	}
 	evt.Skip();
 }
@@ -667,6 +680,7 @@ void NotePanel::OnMinimizeButtonMouseLeave(wxMouseEvent& evt) {
 }
 void NotePanel::OnMinimizeButtonMouseLeftDown(wxMouseEvent& evt) {
 	SetMinimize(!m_isMinimized);
+	CHILD_CHANGED;
 }
 void NotePanel::OnMinimizeButtonPaint(wxPaintEvent& evt) {
 	auto panel = m_miniButton;
@@ -702,9 +716,7 @@ void NotePanel::OnCloseButtonMouseLeftDown(wxMouseEvent& evt) {
 	dialog->SetYesNoLabels(wxString::FromUTF8("Có"), wxString::FromUTF8("Không"));
 	int ret = dialog->ShowModal();
 	if (ret != wxID_YES) return;
-	CHILD_CHANGED;
-	m_parent->DeleteNote(this);
-	this->Destroy();
+	this->OnClose();
 }
 void NotePanel::OnCloseButtonPaint(wxPaintEvent& evt) {
 	auto panel = m_closeButton;
@@ -738,7 +750,7 @@ void NotePanel::OnMouseScroll(wxMouseEvent& evt) {
 	wxWindow* window = static_cast<wxWindow*>(evt.GetEventObject());
 	if (window) {
 		if (window->GetScrollThumb(wxVERTICAL) == 0) {
-			m_parent->OnScroll(evt.GetWheelRotation(), evt.ControlDown(), evt.ShiftDown());
+			m_parent->OnScroll(evt.GetWheelRotation(), evt.GetWheelDelta(), evt.ControlDown(), evt.ShiftDown());
 		}
 	}
 	evt.Skip();

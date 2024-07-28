@@ -5,6 +5,8 @@ VisualStudioVersion = 17.6.33829.357
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "NoteHolder", "NoteHolder.vcxproj", "{2FFABF61-6C20-4622-92B6-CAF6A49AD9FA}"
 EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "NoteHolderSetup", "..\NoteHolderSetup\NoteHolderSetup.vdproj", "{340F8292-C0DE-4FF5-9CCA-E06F98FA020E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -21,6 +23,10 @@ Global
 		{2FFABF61-6C20-4622-92B6-CAF6A49AD9FA}.Release|x64.Build.0 = Release|x64
 		{2FFABF61-6C20-4622-92B6-CAF6A49AD9FA}.Release|x86.ActiveCfg = Release|Win32
 		{2FFABF61-6C20-4622-92B6-CAF6A49AD9FA}.Release|x86.Build.0 = Release|Win32
+		{340F8292-C0DE-4FF5-9CCA-E06F98FA020E}.Debug|x64.ActiveCfg = Debug
+		{340F8292-C0DE-4FF5-9CCA-E06F98FA020E}.Debug|x86.ActiveCfg = Debug
+		{340F8292-C0DE-4FF5-9CCA-E06F98FA020E}.Release|x64.ActiveCfg = Release
+		{340F8292-C0DE-4FF5-9CCA-E06F98FA020E}.Release|x86.ActiveCfg = Release
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
